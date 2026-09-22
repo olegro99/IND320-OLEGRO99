@@ -570,7 +570,7 @@ wheels = [
 
 [[package]]
 name = "ind320"
-version = "2026.1.0"
+version = "2026.2.0"
 source = { virtual = "." }
 dependencies = [
     { name = "anywidget" },
@@ -583,8 +583,8 @@ dependencies = [
     { name = "ipywidgets" },
     { name = "jupyter-book" },
     { name = "jupyterlab" },
-    { name = "jupyterlab-deck" },
     { name = "jupyterlab-myst" },
+    { name = "jupyterlab-slideshow" },
     { name = "kaleido" },
     { name = "lorem" },
     { name = "matplotlib" },
@@ -621,8 +621,8 @@ requires-dist = [
     { name = "ipywidgets" },
     { name = "jupyter-book" },
     { name = "jupyterlab" },
-    { name = "jupyterlab-deck" },
     { name = "jupyterlab-myst" },
+    { name = "jupyterlab-slideshow" },
     { name = "kaleido" },
     { name = "lorem" },
     { name = "matplotlib" },
@@ -989,19 +989,6 @@ wheels = [
 ]
 
 [[package]]
-name = "jupyterlab-deck"
-version = "0.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jupyterlab" },
-    { name = "jupyterlab-fonts" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/48/fb70e40b6a01d10bafda93d5c847beec7cb0015e007dcb3453bc09dfb9a4/jupyterlab_deck-0.2.0.tar.gz", hash = "sha256:f91eb4164538082718a3c7d4a605bf114eb7e034a199047a4098c18e0e8a25bc", size = 359177, upload-time = "2023-12-12T18:44:02.096Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/fd/0ace1431ea55aa11cdb69627cc7b6ba2b44506ceb60465b0b9df3859b9ff/jupyterlab_deck-0.2.0-py3-none-any.whl", hash = "sha256:ee70e0d2ff199260b179a77533a3b9cd5fcd858782c07f50311fbba68d6f903b", size = 149740, upload-time = "2023-12-12T18:44:00.14Z" },
-]
-
-[[package]]
 name = "jupyterlab-fonts"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1050,6 +1037,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d6/2c/90153f189e421e93c4bb4f9e3f59802a1f01abd2ac5cf40b152d7f735232/jupyterlab_server-2.28.0.tar.gz", hash = "sha256:35baa81898b15f93573e2deca50d11ac0ae407ebb688299d3a5213265033712c", size = 76996, upload-time = "2025-10-22T13:59:18.37Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/07/a000fe835f76b7e1143242ab1122e6362ef1c03f23f83a045c38859c2ae0/jupyterlab_server-2.28.0-py3-none-any.whl", hash = "sha256:e4355b148fdcf34d312bbbc80f22467d6d20460e8b8736bf235577dd18506968", size = 59830, upload-time = "2025-10-22T13:59:16.767Z" },
+]
+
+[[package]]
+name = "jupyterlab-slideshow"
+version = "0.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jupyterlab" },
+    { name = "jupyterlab-fonts" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4b/97/efd6a947d2e1736b428f10c9f98ac389e0d0980abf362b8fdaf9c4abc1b8/jupyterlab_slideshow-0.3.4.tar.gz", hash = "sha256:285300a4139d26ea4e31f517fa6f3b734edc9c3910ae5ea8ec96a5591f636f85", size = 368027, upload-time = "2025-05-14T09:54:22.867Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f1/72/fbe875d81f841accaf50092135d6090a7fe093e4a3e591492e00d638a354/jupyterlab_slideshow-0.3.4-py3-none-any.whl", hash = "sha256:08419dfd7b38f856fbdc2e107cc9a7fd4d31090f97199b5f20ccfbbb5c142785", size = 153108, upload-time = "2025-05-14T09:54:20.991Z" },
 ]
 
 [[package]]
