@@ -2,7 +2,7 @@ ipykernel
 pip
 jupyter-book
 jupyterlab_myst
-jupyterlab-deck
+jupyterlab-slideshow
 jupyterlab
 matplotlib
 numpy
