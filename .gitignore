@@ -15,3 +15,7 @@ D2Dbook/_build
 
 # MyST build outputs
 _build
+
+# Ignore video and zip files in D2Dbook
+D2Dbook/Video assignment 1.mp4
+D2Dbook/Assingment 1.zip
