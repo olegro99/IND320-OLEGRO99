@@ -19,3 +19,9 @@ _build
 # Ignore video and zip files in D2Dbook
 D2Dbook/Video assignment 1.mp4
 D2Dbook/Assingment 1.zip
+
+# Ignore .env file
+.env
+
+# Ignore virtual environment folder
+.venv311/
