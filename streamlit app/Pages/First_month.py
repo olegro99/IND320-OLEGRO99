@@ -3,7 +3,7 @@ import pandas as pd
 
 @st.cache_data
 def load_reservoir_data():
-    data = pd.read_csv("../data/reservoirs_processed.csv")
+    data = pd.read_csv("D2Dbook/data/reservoirs_processed.csv")
 
     data = data.rename(columns={
         "dato_Id": "Date",
