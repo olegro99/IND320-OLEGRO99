@@ -19,3 +19,8 @@ _build
 # Ignore video and zip files in D2Dbook
 D2Dbook/Video assignment 1.mp4
 D2Dbook/Assingment 1.zip
+
+.venv/
+.venv311/
+D2Dbook/.venv311/
+__pycache__/
