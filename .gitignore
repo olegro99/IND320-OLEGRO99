@@ -4,17 +4,17 @@ No_sync/
 # Ignore Mac files
 .DS_Store
 
-# Ignore .ipynb_checkpoints
-.ipynb_checkpoints
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
 
-# Ignore pycache
-__pycache__
+# Ignore Python cache
+__pycache__/
 
 # Ignore compiled book in D2Dbook
-D2Dbook/_build
+D2Dbook/_build/
 
 # MyST build outputs
-_build
+_build/
 
 # Ignore video and zip files in D2Dbook
 D2Dbook/Video assignment 1.mp4
@@ -24,3 +24,7 @@ D2Dbook/Assingment 1.zip
 .venv311/
 D2Dbook/.venv311/
 __pycache__/
+# Ignore environment files
+.env
+.venv/
+.venv311/
