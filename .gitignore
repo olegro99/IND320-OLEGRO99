@@ -20,6 +20,7 @@ _build/
 D2Dbook/Video assignment 1.mp4
 D2Dbook/Assingment 1.zip
 
+<<<<<<< HEAD
 .venv/
 .venv311/
 D2Dbook/.venv311/
@@ -28,3 +29,10 @@ __pycache__/
 .env
 .venv/
 .venv311/
+=======
+# Ignore .env file
+.env
+
+# Ignore virtual environment folder
+.venv311/
+>>>>>>> Assignment-2-branch
