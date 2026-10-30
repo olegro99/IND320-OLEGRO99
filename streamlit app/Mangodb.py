@@ -8,7 +8,7 @@ import streamlit as st
 
 @st.cache_resource
 def init_connection():
-    mongo_uri = st.secrets("MONGO_URI")
+    mongo_uri = st.secrets["MONGO_URI"]
 
     client = pymongo.MongoClient(
         mongo_uri,
