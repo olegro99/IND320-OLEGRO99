@@ -4,30 +4,18 @@ import os
 import pandas as pd
 import pymongo
 import streamlit as st
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
 
 
 @st.cache_resource
 def init_connection():
-    """Connect to MongoDB using OPEN_User_URI from .env."""
-    mongo_uri = os.getenv("OPEN_User_URI")
-
-    if not mongo_uri:
-        raise ValueError(
-            "OPEN_User_URI was not found. "
-            "Check that it is defined in your .env file."
-        )
+    mongo_uri = st.secrets("MONGO_URI")
 
     client = pymongo.MongoClient(
         mongo_uri,
         serverSelectionTimeoutMS=10000
     )
 
-    # Test that the connection works
     client.admin.command("ping")
-
     return client
 
 
