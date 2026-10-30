@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-import pandas as pd
-import streamlit as st
-=======
 
 import streamlit as st
 from Mangodb import get_data
@@ -18,4 +14,3 @@ try:
 except Exception as e:
     st.error(f"Kunne ikke hente data fra MongoDB: {e}")
 
->>>>>>> Assignment-2-branch

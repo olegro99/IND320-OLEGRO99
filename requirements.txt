@@ -32,3 +32,4 @@ lorem
 pymongo
 streamlit
 nbstripout
+python-dotenv
