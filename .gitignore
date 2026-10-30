@@ -33,3 +33,6 @@ __pycache__/
 
 # Ignore virtual environment folder
 .venv311/
+
+#ignore secrets file for Streamlit app
+streamlit app/.streamlit/secrets.toml
