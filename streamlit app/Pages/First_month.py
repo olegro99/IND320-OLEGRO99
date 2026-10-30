@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-import streamlit as st
-import pandas as pd
-
-@st.cache_data
-def load_reservoir_data():
-    data = pd.read_csv("D2Dbook/data/reservoirs_processed.csv")
-
-=======
 
 import streamlit as st
 import pandas as pd
@@ -27,7 +18,6 @@ def load_reservoir_data():
     data = pd.DataFrame(response.json())
 
     # Rename columns to English
->>>>>>> Assignment-2-branch
     data = data.rename(columns={
         "dato_Id": "Date",
         "fyllingsgrad": "filling_level",
@@ -37,44 +27,15 @@ def load_reservoir_data():
         "endring_fyllingsgrad": "change_filling_level"
     })
 
-<<<<<<< HEAD
-    data["Date"] = pd.to_datetime(data["Date"])
-=======
     # Convert dates to datetime
     data["Date"] = pd.to_datetime(data["Date"], errors="coerce")
 
     # Remove rows without a valid date
     data = data.dropna(subset=["Date"])
->>>>>>> Assignment-2-branch
 
     return data
 
 
-<<<<<<< HEAD
-reservoir_data = load_reservoir_data()
-
-st.title("Reservoirs")
-
-# First month
-first_month = reservoir_data[
-    reservoir_data["Date"] < reservoir_data["Date"].min() + pd.DateOffset(months=1)
-]
-
-chart_data = pd.DataFrame({
-    "Variable": [
-        "filling_level",
-        "Capacity(TWh)",
-        "Filled (TWh)",
-        "filling_level_previous_week",
-        "change_filling_level"
-    ],
-    "Values": [
-        first_month["filling_level"].tolist(),
-        first_month["Capacity(TWh)"].tolist(),
-        first_month["Filled (TWh)"].tolist(),
-        first_month["filling_level_previous_week"].tolist(),
-        first_month["change_filling_level"].tolist()
-=======
 try:
     reservoir_data = load_reservoir_data()
 except (requests.RequestException, ValueError) as e:
@@ -109,7 +70,6 @@ chart_data = pd.DataFrame({
     "Values": [
         first_month[column].tolist()
         for column in columns
->>>>>>> Assignment-2-branch
     ]
 })
 
@@ -123,7 +83,3 @@ st.dataframe(
     },
     hide_index=True
 )
-<<<<<<< HEAD
-
-=======
->>>>>>> Assignment-2-branch
