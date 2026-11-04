@@ -20,14 +20,21 @@ Data Analysis: Perform additional analysis using Jupyter Notebooks.
 
 Project Structure
 
+```text
 IND320-OLEGRO99/
 │
 ├── hadoop-3.3.1/      # Hadoop installation
 ├── Notebooks/         # Jupyter notebooks and data analysis
 ├── streamlit app/     # Streamlit dashboard
 │   ├── app.py
+│   ├── Mangodb.py
 │   └── Pages/
+│       ├── Home.py
+│       ├── First_month.py
+│       ├── analysis.py
+│       └── Cross_border_flows.py
 │
 ├── requirements.txt   # Python dependencies
 ├── .gitignore
 └── README.md
+```
