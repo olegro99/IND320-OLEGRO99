@@ -22,7 +22,6 @@ Project Structure
 
 IND320-OLEGRO99/
 │
-├── D2Dbook/           # Book and related course material
 ├── hadoop-3.3.1/      # Hadoop installation
 ├── Notebooks/         # Jupyter notebooks and data analysis
 ├── streamlit app/     # Streamlit dashboard
