@@ -23,7 +23,6 @@ Project Structure
 ```text
 IND320-OLEGRO99/
 │
-├── hadoop-3.3.1/      # Hadoop installation
 ├── Notebooks/         # Jupyter notebooks and data analysis
 ├── streamlit app/     # Streamlit dashboard
 │   ├── app.py
