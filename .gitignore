@@ -36,3 +36,6 @@ __pycache__/
 
 #ignore secrets file for Streamlit app
 streamlit app/.streamlit/secrets.toml
+
+# API cache
+.cache*
