@@ -36,3 +36,6 @@ __pycache__/
 
 #ignore secrets file for Streamlit app
 streamlit app/.streamlit/secrets.toml
+
+# Ignore hadoop binaries
+hadoop-3.3.1/bin/
