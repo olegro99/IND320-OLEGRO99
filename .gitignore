@@ -28,6 +28,7 @@ __pycache__/
 .env
 .venv/
 .venv311/
+.venv313/
 # Ignore .env file
 .env
 
