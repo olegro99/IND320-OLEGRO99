@@ -23,17 +23,24 @@ Project Structure
 ```text
 IND320-OLEGRO99/
 │
-├── Notebooks/         # Jupyter notebooks and data analysis
-├── streamlit app/     # Streamlit dashboard
-│   ├── app.py
-│   ├── Mangodb.py
+├── Notebooks/                  # Jupyter notebooks and data analysis
+│
+├── streamlit app/              # Streamlit dashboard
+│   ├── app.py                  # Main Streamlit application
+│   ├── Mangodb.py              # MongoDB connection and data functions
+│   ├── weather_functions.py    # Functions for downloading weather data
+│   │
 │   └── Pages/
 │       ├── Home.py
 │       ├── First_month.py
+│       ├── Weather.py           # Meteorological data
+│       ├── Time_series_analysis.py
+│       ├── Anomaly_analysis.py
 │       ├── analysis.py
-│       └── Cross_border_flows.py
+│       ├── Cross_border_flows.py
+│       └── test.py
 │
-├── requirements.txt   # Python dependencies
-├── .gitignore
-└── README.md
+├── requirements.txt            # Python dependencies
+├── .gitignore                   # Files excluded from Git
+└── README.md                    # Project documentation
 ```
