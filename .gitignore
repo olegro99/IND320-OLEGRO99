@@ -20,23 +20,20 @@ _build/
 D2Dbook/Video assignment 1.mp4
 D2Dbook/Assingment 1.zip
 
-.venv/
-.venv311/
-D2Dbook/.venv311/
-__pycache__/
-# Ignore environment files
-.env
+# Ignore virtual environments
 .venv/
 .venv311/
 .venv313/
-# Ignore .env file
+D2Dbook/.venv311/
+
+# Ignore environment files
 .env
 
-# Ignore virtual environment folder
-.venv311/
-
-#ignore secrets file for Streamlit app
+# Ignore Streamlit secrets
 streamlit app/.streamlit/secrets.toml
 
-# API cache
+# Ignore API cache
 .cache*
+
+# Ignore Hadoop binaries
+hadoop-3.3.1/bin/
