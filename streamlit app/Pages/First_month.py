@@ -4,8 +4,13 @@ import pandas as pd
 import requests
 
 
+
+# Load reservoir data from NVE
+
+
 @st.cache_data(ttl=3600)
 def load_reservoir_data():
+
     # Fetch reservoir data from the NVE API
     url = (
         "https://biapi.nve.no/magasinstatistikk/"
@@ -28,7 +33,10 @@ def load_reservoir_data():
     })
 
     # Convert dates to datetime
-    data["Date"] = pd.to_datetime(data["Date"], errors="coerce")
+    data["Date"] = pd.to_datetime(
+        data["Date"],
+        errors="coerce"
+    )
 
     # Remove rows without a valid date
     data = data.dropna(subset=["Date"])
@@ -36,16 +44,65 @@ def load_reservoir_data():
     return data
 
 
+
+# Get reservoir data
+
+
 try:
     reservoir_data = load_reservoir_data()
+
 except (requests.RequestException, ValueError) as e:
     st.error(f"Could not load reservoir data: {e}")
     st.stop()
 
 
+
+# Select area using the global selector
+
+
 st.title("Reservoirs")
 
-# Define the columns to display
+# Get the selected area from app.py
+selected_area = st.session_state["selected_area"]
+
+# Map the selected area to the corresponding NVE VASS area
+area_mapping = {
+    "East": 1,
+    "West": 2,
+    "North": 3
+}
+
+selected_omrnr = area_mapping[selected_area]
+
+# Filter the reservoir data
+reservoir_data["omrnr"] = pd.to_numeric(
+    reservoir_data["omrnr"],
+    errors="coerce"
+)
+
+reservoir_data = reservoir_data[
+    (reservoir_data["omrType"] == "VASS")
+    & (reservoir_data["omrnr"] == selected_omrnr)
+].copy()
+
+st.write(f"Selected area: **{selected_area}**")
+
+
+
+# Check filtered data
+
+
+if reservoir_data.empty:
+    st.warning(
+        f"No reservoir data available for {selected_area}."
+    )
+    st.stop()
+
+
+
+# Select the first month
+
+
 columns = [
     "filling_level",
     "Capacity(TWh)",
@@ -54,12 +111,10 @@ columns = [
     "change_filling_level"
 ]
 
-if reservoir_data.empty:
-    st.warning("No reservoir data is available.")
-    st.stop()
-
-# Select the first month based on the earliest date
+# Find the earliest date for the selected area
 first_date = reservoir_data["Date"].min()
+
+# Select the first month
 first_month = reservoir_data[
     reservoir_data["Date"] < first_date + pd.DateOffset(months=1)
 ]
@@ -73,6 +128,7 @@ chart_data = pd.DataFrame({
     ]
 })
 
+# Display the data
 st.dataframe(
     chart_data,
     column_config={
