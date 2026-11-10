@@ -51,8 +51,8 @@ def find_shapefile(shapefile_path=None):
     project_folder = Path(__file__).resolve().parent
 
     possible_paths = [
-    project_folder / "NVE_Region" / "NVE_Region.shp"
-    ]
+    project_folder.parent / "NVE_Region" / "NVE_Region.shp"
+]
 
     for path in possible_paths:
         if path.exists():
