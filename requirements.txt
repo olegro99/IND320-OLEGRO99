@@ -33,3 +33,6 @@ pymongo
 streamlit
 nbstripout
 python-dotenv
+openmeteo-requests
+requests-cache
+retry-requests
