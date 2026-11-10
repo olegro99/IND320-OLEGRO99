@@ -26,14 +26,22 @@ IND320-OLEGRO99/
 ├── Notebooks/                  # Jupyter notebooks and data analysis
 │
 ├── streamlit app/              # Streamlit dashboard
+│   │
 │   ├── app.py                  # Main Streamlit application
 │   ├── Mangodb.py              # MongoDB connection and data functions
 │   ├── weather_functions.py    # Functions for downloading weather data
 │   │
+│   ├── data/
+│   │   └── NVE_Region/         # Geographic shapefiles for NVE regions
+│   │       ├── NVE_Region.shp
+│   │       ├── NVE_Region.shx
+│   │       ├── NVE_Region.dbf
+│   │       └── NVE_Region.prj
+│   │
 │   └── Pages/
 │       ├── Home.py
 │       ├── First_month.py
-│       ├── Weather.py           # Meteorological data
+│       ├── Weather.py          # Meteorological data
 │       ├── Time_series_analysis.py
 │       ├── Anomaly_analysis.py
 │       ├── analysis.py
@@ -41,6 +49,6 @@ IND320-OLEGRO99/
 │       └── test.py
 │
 ├── requirements.txt            # Python dependencies
-├── .gitignore                   # Files excluded from Git
-└── README.md                    # Project documentation
+├── .gitignore                  # Files excluded from Git
+└── README.md                   # Project documentation
 ```
