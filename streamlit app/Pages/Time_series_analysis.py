@@ -111,9 +111,7 @@ with stl_tab:
     )
 
     # Select the seasonal period
-    # For daily data, a period of 7 represents weekly seasonality
     max_period = max(2, len(time_series) // 2)
-
     default_period = min(7, max_period)
 
     seasonal_period = st.slider(
@@ -122,6 +120,33 @@ with stl_tab:
         max_value=max_period,
         value=default_period,
         help="For daily data, 7 represents a weekly seasonal pattern."
+    )
+
+    # Select seasonal smoother
+    seasonal_smoother = st.slider(
+        "Seasonal smoother",
+        min_value=7,
+        max_value=51,
+        value=13,
+        step=2,
+        help="Controls the smoothness of the seasonal component."
+    )
+
+    # Select trend smoother
+    trend_smoother = st.slider(
+        "Trend smoother",
+        min_value=7,
+        max_value=101,
+        value=21,
+        step=2,
+        help="Controls the smoothness of the trend component."
+    )
+
+    # Select robust option
+    robust = st.checkbox(
+        "Robust decomposition",
+        value=True,
+        help="Reduces the influence of outliers."
     )
 
     # Perform STL decomposition
@@ -133,7 +158,9 @@ with stl_tab:
             stl_model = STL(
                 time_series,
                 period=seasonal_period,
-                robust=True
+                seasonal=seasonal_smoother,
+                trend=trend_smoother,
+                robust=robust
             )
 
             stl_result = stl_model.fit()
@@ -152,26 +179,17 @@ with stl_tab:
             axes[0].set_ylabel(selected_variable)
 
             # Trend component
-            axes[1].plot(
-                time_series.index,
-                stl_result.trend
-            )
+            axes[1].plot(time_series.index, stl_result.trend)
             axes[1].set_title("Trend")
             axes[1].set_ylabel("Trend")
 
             # Seasonal component
-            axes[2].plot(
-                time_series.index,
-                stl_result.seasonal
-            )
+            axes[2].plot(time_series.index, stl_result.seasonal)
             axes[2].set_title("Seasonality")
             axes[2].set_ylabel("Seasonal")
 
             # Residual component
-            axes[3].plot(
-                time_series.index,
-                stl_result.resid
-            )
+            axes[3].plot(time_series.index, stl_result.resid)
             axes[3].set_title("Residuals")
             axes[3].set_ylabel("Residuals")
             axes[3].set_xlabel("Date")
@@ -185,7 +203,6 @@ with stl_tab:
             plt.close(fig)
 
             st.success("STL analysis completed successfully!")
-
 
 #Spectrogram analysis
 
