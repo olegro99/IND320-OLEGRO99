@@ -19,7 +19,6 @@ pages = [
     st.Page("Pages/Time_series_analysis.py", title="Time Series Analysis"),
     st.Page("Pages/Anomaly_analysis.py", title="Anomaly Analysis"),
     st.Page("Pages/analysis.py", title="Analysis"),
-    st.Page("Pages/test.py", title="Test"),
     st.Page(
         "Pages/Cross_border_flows.py",
         title="Cross-border flows"
