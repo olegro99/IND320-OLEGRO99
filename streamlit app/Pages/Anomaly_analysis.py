@@ -2,9 +2,45 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
 
 from sklearn.neighbors import LocalOutlierFactor
+
+
+# Apply the dashboard color theme to Plotly figures
+def apply_plot_theme(fig):
+
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="#EAF6FF",
+        plot_bgcolor="#FFFFFF",
+        font=dict(
+            family="sans serif",
+            color="#16324F"
+        ),
+        colorway=[
+            "#168AAD",
+            "#52B6CF",
+            "#1D4E89",
+            "#F4A261"
+        ],
+        margin=dict(l=40, r=30, t=60, b=40),
+        hovermode="x unified"
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#D6ECFA"
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#D6ECFA"
+    )
+
+    return fig
+
 
 st.title("Anomaly and Outlier Detection")
 
@@ -15,23 +51,25 @@ st.write(
 )
 
 
-
 # Load weather data from session state
-
-
 if "weather_daily" not in st.session_state:
+
     st.warning(
         "No weather data found. Go to the Meteorological Data "
         "page and download weather data first."
     )
+
     st.stop()
+
 
 # Load daily weather data
 weather_data = st.session_state["weather_daily"].copy()
 
 if weather_data.empty:
+
     st.warning("The weather dataset is empty.")
     st.stop()
+
 
 # Convert date column to datetime
 weather_data["date"] = pd.to_datetime(
@@ -43,8 +81,6 @@ weather_data = weather_data.dropna(subset=["date"])
 
 
 # Select variable for analysis
-
-
 st.subheader("Data selection")
 
 # Find numerical weather variables
@@ -53,8 +89,10 @@ numeric_columns = weather_data.select_dtypes(
 ).columns.tolist()
 
 if not numeric_columns:
+
     st.error("No numerical variables found.")
     st.stop()
+
 
 # Select a default variable
 default_variable = (
@@ -69,6 +107,7 @@ selected_variable = st.selectbox(
     index=numeric_columns.index(default_variable)
 )
 
+
 # Prepare the selected time series
 time_series = weather_data[
     ["date", selected_variable]
@@ -77,25 +116,55 @@ time_series = weather_data[
 time_series = time_series.dropna()
 time_series = time_series.sort_values("date")
 
+
 # Group observations by date
 time_series = (
     time_series.groupby("date")[selected_variable]
     .mean()
 )
 
+
 if len(time_series) < 5:
+
     st.warning(
         "There are too few observations for anomaly detection. "
         "Download a longer period of weather data."
     )
+
     st.stop()
 
-# Display the original data
+
+# Display information about the selected data
 st.write(f"Selected variable: **{selected_variable}**")
 st.write(f"Number of observations: **{len(time_series)}**")
 
+
+# Display original time series using Plotly
 st.subheader("Original time series")
-st.line_chart(time_series)
+
+fig = px.line(
+    x=time_series.index,
+    y=time_series.values,
+    labels={
+        "x": "Date",
+        "y": selected_variable
+    },
+    title="Original time series"
+)
+
+fig.update_traces(
+    line=dict(color="#168AAD", width=2),
+    hovertemplate=(
+        "Date: %{x|%Y-%m-%d}<br>"
+        + selected_variable
+        + ": %{y:.2f}<extra></extra>"
+    )
+)
+
+fig = apply_plot_theme(fig)
+fig.update_layout(height=450)
+
+st.plotly_chart(fig, use_container_width=True)
 
 
 # --------------------------------------------------
@@ -107,7 +176,9 @@ spc_tab, lof_tab = st.tabs(
 )
 
 
+# --------------------------------------------------
 # OUTLIER DETECTION / SPC
+# --------------------------------------------------
 
 with spc_tab:
 
@@ -123,6 +194,7 @@ with spc_tab:
         "and standard deviation of the selected variable."
     )
 
+
     # Select the number of standard deviations
     sigma = st.slider(
         "Control limit (standard deviations)",
@@ -131,6 +203,7 @@ with spc_tab:
         value=3.0,
         step=0.5
     )
+
 
     if st.button("Run SPC analysis"):
 
@@ -141,11 +214,13 @@ with spc_tab:
         upper_limit = mean_value + sigma * std_value
         lower_limit = mean_value - sigma * std_value
 
+
         # Identify observations outside the control limits
         outliers = (
             (time_series > upper_limit)
             | (time_series < lower_limit)
         )
+
 
         # Create a DataFrame with the results
         spc_results = pd.DataFrame({
@@ -155,6 +230,7 @@ with spc_tab:
             "Lower control limit": lower_limit,
             "Outlier": outliers
         })
+
 
         # Display summary statistics
         st.subheader("SPC results")
@@ -170,74 +246,110 @@ with spc_tab:
         with col3:
             st.metric("Number of outliers", int(outliers.sum()))
 
-        # Create control chart
-        fig, ax = plt.subplots(figsize=(12, 6))
 
-        ax.plot(
-            time_series.index,
-            time_series.values,
-            label="Observed values",
-            marker="o"
+        # Create interactive SPC control chart
+        fig = go.Figure()
+
+
+        # Observed values
+        fig.add_trace(
+            go.Scatter(
+                x=time_series.index,
+                y=time_series.values,
+                mode="lines+markers",
+                name="Observed values",
+                line=dict(color="#168AAD", width=2),
+                marker=dict(size=5)
+            )
         )
 
-        ax.axhline(
-            mean_value,
-            linestyle="--",
-            label="Center line"
+
+        # Center line
+        fig.add_hline(
+            y=mean_value,
+            line_dash="dash",
+            line_color="#1D4E89",
+            annotation_text="Center line"
         )
 
-        ax.axhline(
-            upper_limit,
-            linestyle="--",
-            label="Upper control limit"
+
+        # Upper control limit
+        fig.add_hline(
+            y=upper_limit,
+            line_dash="dash",
+            line_color="#F4A261",
+            annotation_text="Upper control limit"
         )
 
-        ax.axhline(
-            lower_limit,
-            linestyle="--",
-            label="Lower control limit"
+
+        # Lower control limit
+        fig.add_hline(
+            y=lower_limit,
+            line_dash="dash",
+            line_color="#F4A261",
+            annotation_text="Lower control limit"
         )
+
 
         # Highlight outliers
-        ax.scatter(
-            time_series.index[outliers],
-            time_series[outliers],
-            label="Outliers",
-            marker="x",
-            s=80
+        fig.add_trace(
+            go.Scatter(
+                x=time_series.index[outliers],
+                y=time_series[outliers],
+                mode="markers",
+                name="Outliers",
+                marker=dict(
+                    color="#E76F51",
+                    size=11,
+                    symbol="x"
+                )
+            )
         )
 
-        ax.set_title("SPC Control Chart")
-        ax.set_xlabel("Date")
-        ax.set_ylabel(selected_variable)
-        ax.legend()
 
-        plt.xticks(rotation=45)
-        plt.tight_layout()
+        # Update layout
+        fig.update_layout(
+            title="SPC Control Chart",
+            xaxis_title="Date",
+            yaxis_title=selected_variable,
+            height=550
+        )
 
-        st.pyplot(fig)
-        plt.close(fig)
+        fig = apply_plot_theme(fig)
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
 
         # Display detected outliers
         st.subheader("Detected outliers")
 
         if outliers.any():
+
             st.dataframe(
                 spc_results[outliers],
                 use_container_width=True
             )
+
         else:
+
             st.success("No observations outside the control limits.")
+
 
         # Display all results
         with st.expander("Show all SPC results"):
+
             st.dataframe(
                 spc_results,
                 use_container_width=True
             )
 
 
+# --------------------------------------------------
 # ANOMALY DETECTION / LOF
+# --------------------------------------------------
 
 with lof_tab:
 
@@ -254,6 +366,7 @@ with lof_tab:
         "weather variable."
     )
 
+
     # Choose the number of neighbours
     max_neighbors = min(50, len(time_series) - 1)
     default_neighbors = min(20, max_neighbors)
@@ -265,6 +378,7 @@ with lof_tab:
         value=default_neighbors
     )
 
+
     # Choose the expected proportion of anomalies
     contamination = st.slider(
         "Expected proportion of anomalies",
@@ -275,10 +389,12 @@ with lof_tab:
         format="%.2f"
     )
 
+
     if st.button("Run LOF analysis"):
 
         # Convert the time series to a two-dimensional array
         values = time_series.values.reshape(-1, 1)
+
 
         # Create and fit the LOF model
         lof_model = LocalOutlierFactor(
@@ -286,8 +402,10 @@ with lof_tab:
             contamination=contamination
         )
 
+
         # Predict normal observations (1) and anomalies (-1)
         predictions = lof_model.fit_predict(values)
+
 
         # Create a results DataFrame
         lof_results = pd.DataFrame({
@@ -297,9 +415,12 @@ with lof_tab:
             "LOF score": -lof_model.negative_outlier_factor_
         }, index=time_series.index)
 
+
         # Count detected anomalies
         anomalies = lof_results["Anomaly"]
 
+
+        # Display summary statistics
         st.subheader("LOF results")
 
         col1, col2, col3 = st.columns(3)
@@ -322,48 +443,82 @@ with lof_tab:
                 f"{anomalies.mean() * 100:.1f}%"
             )
 
-        # Plot the time series and highlight anomalies
-        fig, ax = plt.subplots(figsize=(12, 6))
 
-        ax.plot(
-            time_series.index,
-            time_series.values,
-            label="Observed values",
-            marker="o"
+        # Create interactive LOF plot
+        fig = go.Figure()
+
+
+        # Observed values
+        fig.add_trace(
+            go.Scatter(
+                x=time_series.index,
+                y=time_series.values,
+                mode="lines",
+                name="Observed values",
+                line=dict(color="#168AAD", width=2)
+            )
         )
 
-        ax.scatter(
-            lof_results.index[anomalies],
-            lof_results.loc[anomalies, "Value"],
-            label="Detected anomalies",
-            marker="x",
-            s=100
+
+        # Highlight detected anomalies
+        fig.add_trace(
+            go.Scatter(
+                x=lof_results.index[anomalies],
+                y=lof_results.loc[anomalies, "Value"],
+                mode="markers",
+                name="Detected anomalies",
+                marker=dict(
+                    color="#E76F51",
+                    size=12,
+                    symbol="x"
+                ),
+                customdata=lof_results.loc[
+                    anomalies, "LOF score"
+                ],
+                hovertemplate=(
+                    "Date: %{x|%Y-%m-%d}<br>"
+                    "Value: %{y:.2f}<br>"
+                    "LOF score: %{customdata:.3f}"
+                    "<extra></extra>"
+                )
+            )
         )
 
-        ax.set_title("LOF Anomaly Detection")
-        ax.set_xlabel("Date")
-        ax.set_ylabel(selected_variable)
-        ax.legend()
 
-        plt.xticks(rotation=45)
-        plt.tight_layout()
+        # Update layout
+        fig.update_layout(
+            title="LOF Anomaly Detection",
+            xaxis_title="Date",
+            yaxis_title=selected_variable,
+            height=550
+        )
 
-        st.pyplot(fig)
-        plt.close(fig)
+        fig = apply_plot_theme(fig)
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
 
         # Display detected anomalies
         st.subheader("Detected anomalies")
 
         if anomalies.any():
+
             st.dataframe(
                 lof_results[anomalies],
                 use_container_width=True
             )
+
         else:
+
             st.success("No anomalies detected.")
+
 
         # Display all results
         with st.expander("Show all LOF results"):
+
             st.dataframe(
                 lof_results,
                 use_container_width=True

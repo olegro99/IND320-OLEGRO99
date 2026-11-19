@@ -1,11 +1,49 @@
 
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.graph_objects as go
 
+from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import STL
 from scipy.signal import spectrogram
+
+
+# Apply the dashboard color theme to Plotly figures
+def apply_plot_theme(fig):
+
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="#EAF6FF",
+        plot_bgcolor="#FFFFFF",
+        font=dict(
+            family="sans serif",
+            color="#16324F"
+        ),
+        colorway=[
+            "#168AAD",
+            "#52B6CF",
+            "#1D4E89",
+            "#90D5EC"
+        ],
+        margin=dict(l=40, r=30, t=60, b=40),
+        hovermode="x unified"
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#D6ECFA"
+    )
+
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#D6ECFA"
+    )
+
+    return fig
+
 
 st.title("Time Series Analysis")
 
@@ -14,20 +52,28 @@ st.write(
     "and spectrogram analysis."
 )
 
+
+# Check if weather data is available
 if "weather_daily" not in st.session_state:
+
     st.warning(
         "No weather data found. Go to the Meteorological Data "
         "page and download weather data first."
     )
+
     st.stop()
+
 
 # Get the downloaded daily weather data
 weather_data = st.session_state["weather_daily"].copy()
 
+
 # Check that the dataset contains data
 if weather_data.empty:
+
     st.warning("The weather dataset is empty.")
     st.stop()
+
 
 # Convert date column to datetime
 weather_data["date"] = pd.to_datetime(
@@ -40,14 +86,18 @@ weather_data = weather_data.dropna(subset=["date"])
 
 st.subheader("Data selection")
 
+
 # Find available numerical weather variables
 numeric_columns = weather_data.select_dtypes(
     include="number"
 ).columns.tolist()
 
+
 if not numeric_columns:
+
     st.error("No numerical variables found in the weather data.")
     st.stop()
+
 
 # Let the user choose which variable to analyse
 default_variable = (
@@ -62,6 +112,7 @@ selected_variable = st.selectbox(
     index=numeric_columns.index(default_variable)
 )
 
+
 # Prepare the selected time series
 time_series = weather_data[
     ["date", selected_variable]
@@ -70,35 +121,67 @@ time_series = weather_data[
 time_series = time_series.dropna()
 time_series = time_series.sort_values("date")
 
+
 # Use one observation per date
 time_series = (
     time_series.groupby("date")[selected_variable]
     .mean()
 )
 
+
 # Make sure the series has enough observations
 if len(time_series) < 4:
+
     st.warning(
         "There are too few observations for time series analysis. "
         "Download a longer period of weather data."
     )
+
     st.stop()
+
 
 st.write(f"Selected variable: **{selected_variable}**")
 st.write(f"Number of observations: **{len(time_series)}**")
 
-# Show the original time series
+
+# Display the original time series using Plotly
 st.subheader("Original time series")
 
-st.line_chart(time_series)
+fig = px.line(
+    x=time_series.index,
+    y=time_series.values,
+    labels={
+        "x": "Date",
+        "y": selected_variable
+    },
+    title="Original time series"
+)
+
+fig.update_traces(
+    line=dict(color="#168AAD", width=2),
+    hovertemplate=(
+        "Date: %{x|%Y-%m-%d}<br>"
+        + selected_variable
+        + ": %{y:.2f}<extra></extra>"
+    )
+)
+
+fig = apply_plot_theme(fig)
+
+fig.update_layout(height=450)
+
+st.plotly_chart(fig, use_container_width=True)
 
 
+# Create analysis tabs
 stl_tab, spectrogram_tab = st.tabs(
     ["STL analysis", "Spectrogram"]
 )
 
 
+# --------------------------------------------------
 # STL analysis
+# --------------------------------------------------
 
 with stl_tab:
 
@@ -109,6 +192,7 @@ with stl_tab:
         "separates a time series into three components: "
         "trend, seasonality and residuals."
     )
+
 
     # Select the seasonal period
     max_period = max(2, len(time_series) // 2)
@@ -122,6 +206,7 @@ with stl_tab:
         help="For daily data, 7 represents a weekly seasonal pattern."
     )
 
+
     # Select seasonal smoother
     seasonal_smoother = st.slider(
         "Seasonal smoother",
@@ -132,15 +217,30 @@ with stl_tab:
         help="Controls the smoothness of the seasonal component."
     )
 
+
     # Select trend smoother
+    # STL requires an odd trend window larger than the seasonal period
+    min_trend = seasonal_period + 1
+
+    if min_trend % 2 == 0:
+        min_trend += 1
+
+    default_trend = max(21, min_trend)
+
+    if default_trend % 2 == 0:
+        default_trend += 1
+
+    max_trend = max(101, default_trend)
+
     trend_smoother = st.slider(
         "Trend smoother",
-        min_value=7,
-        max_value=101,
-        value=21,
+        min_value=min_trend,
+        max_value=max_trend,
+        value=default_trend,
         step=2,
         help="Controls the smoothness of the trend component."
     )
+
 
     # Select robust option
     robust = st.checkbox(
@@ -148,6 +248,7 @@ with stl_tab:
         value=True,
         help="Reduces the influence of outliers."
     )
+
 
     # Perform STL decomposition
     if st.button("Run STL analysis"):
@@ -165,46 +266,132 @@ with stl_tab:
 
             stl_result = stl_model.fit()
 
-            # Create a figure with four subplots
-            fig, axes = plt.subplots(
-                4,
-                1,
-                figsize=(12, 9),
-                sharex=True
+
+            # Create four interactive subplots
+            fig = make_subplots(
+                rows=4,
+                cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.07,
+                subplot_titles=(
+                    "Original time series",
+                    "Trend",
+                    "Seasonality",
+                    "Residuals"
+                )
             )
 
+
             # Original time series
-            axes[0].plot(time_series.index, time_series.values)
-            axes[0].set_title("Original time series")
-            axes[0].set_ylabel(selected_variable)
+            fig.add_trace(
+                go.Scatter(
+                    x=time_series.index,
+                    y=time_series.values,
+                    mode="lines",
+                    name="Original",
+                    line=dict(color="#168AAD", width=2)
+                ),
+                row=1,
+                col=1
+            )
+
 
             # Trend component
-            axes[1].plot(time_series.index, stl_result.trend)
-            axes[1].set_title("Trend")
-            axes[1].set_ylabel("Trend")
+            fig.add_trace(
+                go.Scatter(
+                    x=time_series.index,
+                    y=stl_result.trend,
+                    mode="lines",
+                    name="Trend",
+                    line=dict(color="#1D4E89", width=2)
+                ),
+                row=2,
+                col=1
+            )
+
 
             # Seasonal component
-            axes[2].plot(time_series.index, stl_result.seasonal)
-            axes[2].set_title("Seasonality")
-            axes[2].set_ylabel("Seasonal")
+            fig.add_trace(
+                go.Scatter(
+                    x=time_series.index,
+                    y=stl_result.seasonal,
+                    mode="lines",
+                    name="Seasonality",
+                    line=dict(color="#52B6CF", width=2)
+                ),
+                row=3,
+                col=1
+            )
+
 
             # Residual component
-            axes[3].plot(time_series.index, stl_result.resid)
-            axes[3].set_title("Residuals")
-            axes[3].set_ylabel("Residuals")
-            axes[3].set_xlabel("Date")
+            fig.add_trace(
+                go.Scatter(
+                    x=time_series.index,
+                    y=stl_result.resid,
+                    mode="lines",
+                    name="Residuals",
+                    line=dict(color="#F4A261", width=2)
+                ),
+                row=4,
+                col=1
+            )
 
-            # Improve the layout
-            plt.tight_layout()
 
-            # Display the figure
-            st.pyplot(fig)
+            # Update subplot axes
+            fig.update_yaxes(
+                title_text=selected_variable,
+                row=1,
+                col=1
+            )
 
-            plt.close(fig)
+            fig.update_yaxes(
+                title_text="Trend",
+                row=2,
+                col=1
+            )
+
+            fig.update_yaxes(
+                title_text="Seasonal",
+                row=3,
+                col=1
+            )
+
+            fig.update_yaxes(
+                title_text="Residuals",
+                row=4,
+                col=1
+            )
+
+            fig.update_xaxes(
+                title_text="Date",
+                row=4,
+                col=1
+            )
+
+
+            # Apply the dashboard theme
+            fig = apply_plot_theme(fig)
+
+            fig.update_layout(
+                height=850,
+                title_text="STL decomposition",
+                showlegend=False
+            )
+
+
+            # Display the interactive figure
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 
             st.success("STL analysis completed successfully!")
 
-#Spectrogram analysis
+
+# --------------------------------------------------
+# Spectrogram analysis
+# --------------------------------------------------
 
 with spectrogram_tab:
 
@@ -216,6 +403,7 @@ with spectrogram_tab:
         "repeating patterns and periodic behaviour."
     )
 
+
     # Select the window length
     window_length = st.slider(
         "Window length",
@@ -225,6 +413,7 @@ with spectrogram_tab:
         help="Number of observations used in each spectrogram window."
     )
 
+
     # Calculate the spectrogram
     if st.button("Generate spectrogram"):
 
@@ -233,15 +422,17 @@ with spectrogram_tab:
             # Convert the time series to a numerical array
             values = time_series.values.astype(float)
 
+
             # Calculate the spectrogram
             frequencies, times, power = spectrogram(
                 values,
-                fs=1,  # One observation per day
+                fs=1,
                 nperseg=window_length,
                 noverlap=window_length // 2,
                 detrend="linear",
                 scaling="density"
             )
+
 
             # Remove zero frequency because its period is infinite
             nonzero_frequency = frequencies > 0
@@ -249,8 +440,10 @@ with spectrogram_tab:
             frequencies = frequencies[nonzero_frequency]
             power = power[nonzero_frequency, :]
 
+
             # Convert frequency to decibels
             power_db = 10 * np.log10(power + 1e-12)
+
 
             # Convert relative time to dates
             spectrogram_dates = (
@@ -258,33 +451,44 @@ with spectrogram_tab:
                 + pd.to_timedelta(times, unit="D")
             )
 
-            # Create the spectrogram plot
-            fig, ax = plt.subplots(figsize=(12, 6))
 
-            image = ax.pcolormesh(
-                spectrogram_dates,
-                frequencies,
-                power_db,
-                shading="auto"
+            # Create an interactive spectrogram using Plotly
+            fig = go.Figure(
+                data=go.Heatmap(
+                    x=spectrogram_dates,
+                    y=frequencies,
+                    z=power_db,
+                    colorscale="Blues",
+                    colorbar=dict(
+                        title="Power (dB)"
+                    ),
+                    hovertemplate=(
+                        "Date: %{x|%Y-%m-%d}<br>"
+                        "Frequency: %{y:.4f} cycles/day<br>"
+                        "Power: %{z:.2f} dB"
+                        "<extra></extra>"
+                    )
+                )
             )
 
-            # Add labels and title
-            ax.set_title("Spectrogram")
-            ax.set_xlabel("Date")
-            ax.set_ylabel("Frequency (cycles per day)")
 
-            # Add colorbar
-            fig.colorbar(
-                image,
-                ax=ax,
-                label="Power (dB)"
+            # Update layout
+            fig.update_layout(
+                title="Spectrogram",
+                xaxis_title="Date",
+                yaxis_title="Frequency (cycles per day)",
+                height=600
             )
 
-            plt.tight_layout()
 
-            # Display the figure
-            st.pyplot(fig)
+            # Apply the dashboard theme
+            fig = apply_plot_theme(fig)
 
-            plt.close(fig)
+
+            # Display the interactive figure
+            st.plotly_chart(
+                fig,
+                use_container_width=True
+            )
 
             st.success("Spectrogram generated successfully!")

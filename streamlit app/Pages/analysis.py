@@ -4,7 +4,21 @@ import pandas as pd
 import requests
 import plotly.express as px
 
+def apply_plot_theme(fig):
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="#EAF6FF",
+        plot_bgcolor="#FFFFFF",
+        font=dict(family="sans serif", color="#16324F"),
+        colorway=["#168AAD", "#52B6CF", "#1D4E89", "#F4A261"],
+        margin=dict(l=40, r=30, t=60, b=40),
+        hovermode="x unified"
+    )
 
+    fig.update_xaxes(showgrid=True, gridcolor="#D6ECFA")
+    fig.update_yaxes(showgrid=True, gridcolor="#D6ECFA")
+
+    return fig
 @st.cache_data(ttl=3600)
 def load_reservoir_data():
     # Fetch reservoir data from the NVE API
@@ -161,9 +175,10 @@ if selected_column == "All":
         )
 
         fig.update_layout(
-            hovermode="x unified",
             legend_title_text="Area number"
         )
+
+        fig = apply_plot_theme(fig)
 
         st.plotly_chart(fig, use_container_width=True)
 
@@ -189,8 +204,9 @@ else:
         )
 
         fig.update_layout(
-            hovermode="x unified",
             legend_title_text="Area number"
         )
+
+        fig = apply_plot_theme(fig)
 
         st.plotly_chart(fig, use_container_width=True)
