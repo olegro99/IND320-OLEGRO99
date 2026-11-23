@@ -21,6 +21,7 @@ pages = {
         st.Page("Pages/Time_series_analysis.py", title="Time Series Analysis"),
         st.Page("Pages/Anomaly_analysis.py", title="Anomaly Analysis"),
         st.Page("Pages/analysis.py", title="Reservoir Analysis"),
+        st.Page("Pages/map.py", title="Map")
     ],
 
     "Cross-border": [
