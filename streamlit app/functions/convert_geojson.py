@@ -1,16 +1,18 @@
-
 import geopandas as gpd
 from pathlib import Path
 
-# Define input and output folders
-data_folder = Path("streamlit app/data")
+# Define the project and data folders
+project_folder = Path(__file__).resolve().parent.parent
+data_folder = project_folder / "data"
 output_folder = data_folder / "geojson"
 
-# Create output folder if it does not exist
 output_folder.mkdir(parents=True, exist_ok=True)
 
-# Find all shapefiles in the data folder
+# Find all shapefiles
 shapefiles = list(data_folder.rglob("*.shp"))
+
+print("Data folder:", data_folder)
+print("Found shapefiles:", [file.name for file in shapefiles])
 
 for shapefile in shapefiles:
 
