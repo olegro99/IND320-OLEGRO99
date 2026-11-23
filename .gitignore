@@ -38,10 +38,5 @@ streamlit app/.streamlit/secrets.toml
 # Ignore Hadoop binaries
 hadoop-3.3.1/bin/
 
-# Ignore shapefiles
-Budområder.dbf
-Budområder.prj
-Budområder.shp
-Budområder.shx
 
 *.toml
