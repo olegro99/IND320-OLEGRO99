@@ -1,4 +1,4 @@
-
+import time
 import openmeteo_requests
 import pandas as pd
 import geopandas as gpd
@@ -30,6 +30,7 @@ REGION_MAPPING = {
 }
 
 
+
 def find_shapefile(shapefile_path=None):
     """
     Locate NVE_Region.shp.
@@ -37,6 +38,7 @@ def find_shapefile(shapefile_path=None):
     You can also provide the full path manually.
     """
 
+    # Use the provided path if available
     if shapefile_path is not None:
         path = Path(shapefile_path)
 
@@ -47,20 +49,20 @@ def find_shapefile(shapefile_path=None):
             f"Shapefile not found: {path}"
         )
 
-    # Check common project locations
-    project_folder = Path(__file__).resolve().parent
+    # Locate the project data folder
+    project_folder = Path(__file__).resolve().parent.parent
+    data_folder = project_folder / "data"
 
-    possible_paths = [
-    project_folder / "data" / "NVE_Region.shp"
-]
+    # Search for the shapefile in the data folder and its subfolders
+    shapefiles = list(
+        data_folder.rglob("NVE_Region.shp")
+    )
 
-    for path in possible_paths:
-        if path.exists():
-            return path
+    if shapefiles:
+        return shapefiles[0]
 
     raise FileNotFoundError(
-        "Could not find NVE_Region.shp. "
-        "Please provide the correct shapefile path."
+        f"Could not find NVE_Region.shp in {data_folder}"
     )
 
 
@@ -120,6 +122,11 @@ def get_region_coordinates(
 
     gdf = gpd.read_file(path)
 
+    # Correct incorrectly decoded Norwegian characters in region codes.
+    gdf["REGION"] = gdf["REGION"].replace({
+        "RÃ\x98": "RØ"
+    })
+    
     # Check required column
     if "REGION" not in gdf.columns:
         raise ValueError(
@@ -261,11 +268,34 @@ def download_weather(
             "timezone": "GMT"
         }
 
-        # Download data
-        responses = openmeteo.weather_api(
-            URL,
-            params=params
-        )
+        
+        # Download data with retry if API request limit is exceeded
+        max_retries = 5
+
+        for attempt in range(max_retries):
+
+            try:
+                responses = openmeteo.weather_api(
+                    URL,
+                    params=params
+                )
+            except Exception as e:
+                if "Minutely API request limit exceeded" not in str(e):
+                    raise
+
+                wait_time = 65 * (attempt + 1)
+                print(
+                    f"API request limit exceeded. "
+                    f"Waiting {wait_time} seconds before retrying..."
+                )
+                time.sleep(wait_time)
+            else:
+                break
+        else:
+            raise RuntimeError(
+                f"Weather download failed for region '{region}' "
+                f"after {max_retries} attempts."
+            )
 
         # Process each location
         for location, response in zip(batch, responses):
@@ -317,6 +347,8 @@ def download_weather(
             })
 
             all_data.append(df)
+
+        time.sleep(2)
 
     # Combine all locations into one DataFrame
     if not all_data:

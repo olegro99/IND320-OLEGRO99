@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 
-from weather_functions import (
+from functions.weather_functions import (
     download_weather,
     aggregate_weather_daily
 )

@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from Mangodb import get_data, get_filter_options
+from functions.Mangodb import get_data, get_filter_options
 
 
 st.title("Cross-border electricity flows")

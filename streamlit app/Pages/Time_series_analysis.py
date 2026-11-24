@@ -179,9 +179,9 @@ stl_tab, spectrogram_tab = st.tabs(
 )
 
 
-# --------------------------------------------------
+
 # STL analysis
-# --------------------------------------------------
+
 
 with stl_tab:
 
@@ -389,9 +389,7 @@ with stl_tab:
             st.success("STL analysis completed successfully!")
 
 
-# --------------------------------------------------
 # Spectrogram analysis
-# --------------------------------------------------
 
 with spectrogram_tab:
 

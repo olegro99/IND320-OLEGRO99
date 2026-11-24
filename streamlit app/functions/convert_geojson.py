@@ -19,6 +19,12 @@ for shapefile in shapefiles:
     # Read shapefile
     gdf = gpd.read_file(shapefile)
 
+    print(f"\nShapefile: {shapefile.name}")
+    print("Columns:", gdf.columns.tolist())
+    print(gdf.head(3))
+    if "REGION" in gdf.columns:
+        print("REGION values:", gdf["REGION"].unique().tolist())
+
     # Ensure that the coordinate reference system is defined
     if gdf.crs is None:
         raise ValueError(f"Missing CRS: {shapefile}")
@@ -33,3 +39,21 @@ for shapefile in shapefiles:
     gdf.to_file(output_file, driver="GeoJSON")
 
     print(f"Converted: {shapefile.name} -> {output_file}")
+
+
+from pathlib import Path
+import geopandas as gpd
+
+data_folder = Path(__file__).resolve().parent.parent / "data"
+
+for shapefile in data_folder.rglob("*.shp"):
+    gdf = gpd.read_file(shapefile)
+
+    print(f"\n--- {shapefile.name} ---")
+    print("Columns:", gdf.columns.tolist())
+    print("Number of areas:", len(gdf))
+
+    for column in gdf.columns:
+        if column != "geometry":
+            print(f"\n{column}:")
+            print(gdf[column].unique())

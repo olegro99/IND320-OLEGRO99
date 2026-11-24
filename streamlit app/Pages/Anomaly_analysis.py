@@ -167,18 +167,18 @@ fig.update_layout(height=450)
 st.plotly_chart(fig, use_container_width=True)
 
 
-# --------------------------------------------------
+
 # Create tabs
-# --------------------------------------------------
+
 
 spc_tab, lof_tab = st.tabs(
     ["Outlier detection / SPC", "Anomaly detection / LOF"]
 )
 
 
-# --------------------------------------------------
+
 # OUTLIER DETECTION / SPC
-# --------------------------------------------------
+
 
 with spc_tab:
 
@@ -347,9 +347,9 @@ with spc_tab:
             )
 
 
-# --------------------------------------------------
+
 # ANOMALY DETECTION / LOF
-# --------------------------------------------------
+
 
 with lof_tab:
 
