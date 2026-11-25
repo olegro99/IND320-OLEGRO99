@@ -39,3 +39,6 @@ retry-requests
 geopandas
 folium
 streamlit-folium
+xgboost
+lightgbm
+

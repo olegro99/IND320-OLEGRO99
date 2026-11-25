@@ -210,3 +210,4 @@ else:
         fig = apply_plot_theme(fig)
 
         st.plotly_chart(fig, use_container_width=True)
+

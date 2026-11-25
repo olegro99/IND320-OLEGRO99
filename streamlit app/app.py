@@ -1,6 +1,10 @@
 import streamlit as st
+from pathlib import Path
 
-# Global settings
+# Sikre korrekte stier uansett hvor appen kjøres fra
+APP_DIR = Path(__file__).parent
+
+# 🌍 Global innstilling i sidebar
 st.sidebar.title("Settings")
 
 selected_area = st.sidebar.selectbox(
@@ -9,24 +13,32 @@ selected_area = st.sidebar.selectbox(
     key="selected_area"
 )
 
-# Page navigation
+# 📂 Sidenavigasjon
 pages = {
-    "Overview": [
-        st.Page("Pages/Home.py", title="Home"),
-        st.Page("Pages/First_month.py", title="First Month"),
+    "Home": [
+        st.Page(APP_DIR / "Pages" / "Home.py", title="Home", icon="🏠"),
     ],
 
-    "Norway": [
-        st.Page("Pages/weather.py", title="Meteorological Data"),
-        st.Page("Pages/Time_series_analysis.py", title="Time Series Analysis"),
-        st.Page("Pages/Anomaly_analysis.py", title="Anomaly Analysis"),
-        st.Page("Pages/analysis.py", title="Reservoir Analysis"),
-        st.Page("Pages/map.py", title="Map"),
-        st.Page("Pages/test map.py", title = "test") 
+    "Explore Data": [
+        st.Page(APP_DIR / "Pages" / "map.py", title="Geographic Map", icon="🗺️"),
+        st.Page(APP_DIR / "Pages" / "analysis.py", title="Reservoir Data", icon="💧"),
+        st.Page(APP_DIR / "Pages" / "Cross_border_flows.py", title="Electricity Flows", icon="⚡"),
+        st.Page(APP_DIR / "Pages" / "weather.py", title="Weather Data", icon="🌤️"),
     ],
 
-    "Cross-border": [
-        st.Page("Pages/Cross_border_flows.py", title="Cross-border Flows"),
+    "Analysis": [
+        st.Page(APP_DIR / "Pages" / "Time_series_analysis.py", title="Time Series Analysis", icon="📈"),
+        st.Page(APP_DIR / "Pages" / "Anomaly_analysis.py", title="Anomaly Detection", icon="🚨"),
+        st.Page(APP_DIR / "Pages" / "Weather_correlation.py", title="Weather Correlation", icon="🔗"),
+    ],
+
+    "Forecasting": [
+        st.Page(APP_DIR / "Pages" / "Forecasting.py", title="Reservoir Filling Forecast", icon="🔮"),
+    ],
+
+    # 🧪 Gamle/originale sider samlet her
+    "Test": [
+        st.Page(APP_DIR / "Pages" / "test map.py", title="test"),
     ],
 }
 

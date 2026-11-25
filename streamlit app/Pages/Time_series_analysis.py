@@ -98,19 +98,41 @@ if not numeric_columns:
     st.error("No numerical variables found in the weather data.")
     st.stop()
 
+# Define available weather properties
+weather_variables = {
+    "Temperature": "temperature_2m",
+    "Precipitation": "precipitation",
+    "Relative humidity": "relative_humidity_2m",
+    "Wind speed": "wind_speed_10m"
+}
 
-# Let the user choose which variable to analyse
-default_variable = (
-    "temperature_2m"
-    if "temperature_2m" in numeric_columns
-    else numeric_columns[0]
+# Keep only variables that exist in the dataset
+available_variables = {
+    name: column
+    for name, column in weather_variables.items()
+    if column in numeric_columns
+}
+
+if not available_variables:
+    st.error("No supported weather variables found.")
+    st.stop()
+
+# Select weather property, with Temperature as default
+variable_names = list(available_variables.keys())
+
+default_index = (
+    variable_names.index("Temperature")
+    if "Temperature" in variable_names
+    else 0
 )
 
-selected_variable = st.selectbox(
-    "Select variable",
-    numeric_columns,
-    index=numeric_columns.index(default_variable)
+selected_property = st.selectbox(
+    "Select weather property",
+    variable_names,
+    index=default_index
 )
+
+selected_variable = available_variables[selected_property]
 
 
 # Prepare the selected time series
@@ -140,7 +162,7 @@ if len(time_series) < 4:
     st.stop()
 
 
-st.write(f"Selected variable: **{selected_variable}**")
+st.write(f"Selected weather property: **{selected_property}**")
 st.write(f"Number of observations: **{len(time_series)}**")
 
 
@@ -193,6 +215,23 @@ with stl_tab:
         "trend, seasonality and residuals."
     )
 
+    # Select weather property
+    weather_options = {
+        "Temperature": "temperature_2m",
+        "Precipitation": "precipitation",
+        "Relative humidity": "relative_humidity_2m",
+        "Wind speed": "wind_speed_10m"
+        }
+
+    selected_variable = st.selectbox(
+        "Select weather property",
+        list(weather_options.keys()),
+        index=0,
+        key="satv_weather_property"
+        )
+
+    # Select the corresponding weather time series
+    time_series = weather_data[weather_options[selected_variable]]
 
     # Select the seasonal period
     max_period = max(2, len(time_series) // 2)
