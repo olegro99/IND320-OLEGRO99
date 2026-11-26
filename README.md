@@ -55,10 +55,9 @@ IND320-OLEGRO99/
 │
 ├── Notebooks/                       # Jupyter notebooks and data analysis
 │
-├──images                            # skecth
-│
 ├── streamlit app/
 │   │
+│   ├──images                            # skecth
 │   ├── app.py                       # Main Streamlit application
 │   │
 │   ├── data/                        # Geographical data and supporting files
