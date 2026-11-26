@@ -19,6 +19,7 @@ from functions.weather_functions import (
 )
 
 
+
 # Download weather data from Open-Meteo
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_weather_from_api():
@@ -32,7 +33,7 @@ def load_weather_from_api():
             region=region,
             start_date="2024-01-01",
             end_date="2025-12-31",
-            batch_size=20
+            batch_size=10
         )
 
         if weather_region is None or weather_region.empty:
@@ -42,38 +43,41 @@ def load_weather_from_api():
 
         weather_frames.append(weather_region)
 
-    weather_data = pd.concat(
+    return pd.concat(
         weather_frames,
         ignore_index=True
     )
 
-    return weather_data
+
+st.title("Sliding Window Correlation")
+
+st.write(
+    "Explore how meteorological variables relate to "
+    "national reservoir filling over time."
+)
+
+if st.button("Download weather data"):
+
+    try:
+        with st.spinner("Downloading weather data from Open-Meteo..."):
+            weather_data = load_weather_from_api()
+
+        st.session_state["weather_data"] = weather_data
+        st.success("Weather data downloaded successfully!")
+
+    except Exception as e:
+        st.error("Unable to retrieve weather data from Open-Meteo.")
+        st.warning("Please try again later.")
+        st.caption(str(e))
 
 
-try:
-    with st.spinner("Downloading weather data from Open-Meteo..."):
-        weather_data = load_weather_from_api()
-
-    if weather_data.empty:
-        st.warning("No weather data available from Open-Meteo.")
-        st.stop()
-
-except Exception as e:
-    st.error("Unable to retrieve weather data from Open-Meteo.")
-    st.warning("Please try again later.")
-    st.caption(str(e))
+# Only continue when weather data has been downloaded
+if "weather_data" not in st.session_state:
+    st.info("Click 'Download weather data' to load the data and display the correlation plot.")
     st.stop()
 
+weather_data = st.session_state["weather_data"]
 
-# Retrieve reservoir data from NVE
-try:
-    water_df = get_water_data()
-    water_df = process_water_data(water_df)
-
-except Exception as e:
-    st.error("Unable to retrieve reservoir data from NVE.")
-    st.warning("Please try again later.")
-    st.stop()
 
 
 def aggregate_weather_weekly(weather_data):

@@ -193,7 +193,8 @@ gdf = gdf.merge(
 gdf["fyllingsgrad"] = pd.to_numeric(
     gdf["fyllingsgrad"],
     errors="coerce"
-)
+).round(2)
+
 # --------------------------------------------------
 # 6. Define colors based on reservoir filling
 # --------------------------------------------------
@@ -460,7 +461,9 @@ if "map_selected_area_type" not in st.session_state:
 # --------------------------------------------------
 # 9. Create map layer
 # --------------------------------------------------
-
+gdf["fyllingsgrad_visning"] = gdf["fyllingsgrad"].map(
+    lambda x: f"{x:.2f}" if pd.notna(x) else "N/A"
+)
 
 
 geojson_data = gdf.__geo_interface__
@@ -492,14 +495,14 @@ if area_type == "Price area":
 
     tooltip_text = (
         "{budomr}\n"
-        "Reservoir filling: {fyllingsgrad}%"
+        "Reservoir filling: {fyllingsgrad_visning}%"
     )
 
 elif area_type == "Water area":
 
     tooltip_text = (
         "{water_area}\n"
-        "Reservoir filling: {fyllingsgrad}%"
+        "Reservoir filling: {fyllingsgrad_visning}%"
     )
 
 else:
@@ -518,7 +521,6 @@ else:
         + " "
         + unit_mapping[weather_parameter]
     )
-
 
 view_state = pdk.ViewState(
     latitude=64.5,
