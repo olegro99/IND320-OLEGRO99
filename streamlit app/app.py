@@ -36,10 +36,6 @@ pages = {
         st.Page(APP_DIR / "Pages" / "Forecasting.py", title="Reservoir Filling Forecast", icon="🔮"),
     ],
 
-    # 🧪 Gamle/originale sider samlet her
-    "Test": [
-        st.Page(APP_DIR / "Pages" / "test map.py", title="test"),
-    ],
 }
 
 pg = st.navigation(pages)

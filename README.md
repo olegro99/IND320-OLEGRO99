@@ -1,54 +1,92 @@
-Project Overview
+# IND320 – Energy Data Analysis and Visualization
 
-This project was developed as part of the IND320 course. The objective is to collect, process, store and visualize energy-related data using different data technologies, APIs and database solutions.
+## Project Overview
 
-The project focuses on Norwegian reservoir statistics and cross-border electricity flows. The collected data is processed, stored and presented through an interactive Streamlit web application.
+This project was developed as part of the IND320 course. The objective is to collect, process, store, analyse and visualize energy-related data using different data technologies, APIs and database solutions.
 
-Features
+The project focuses on Norwegian reservoir statistics, meteorological data and cross-border electricity flows. Data is collected from external APIs, processed using Python and stored or retrieved through database solutions. The results are presented through an interactive Streamlit web application.
 
-Reservoir Statistics: Retrieve and visualize Norwegian reservoir data from the NVE Magasinstatistikk API.
+## Features
 
-Cross-border Electricity Flows: Collect electricity flow data between Norway and neighboring countries using the ENTSO-E API.
+### Reservoir Statistics
+- Retrieve Norwegian reservoir data from the NVE Magasinstatistikk API.
+- Process and visualize reservoir filling levels.
+- Explore reservoir statistics across different areas.
 
-Data Processing: Process and transform energy data using Python, Pandas and PySpark.
+### Weather Data and Analysis
+- Retrieve historical weather data from the Open-Meteo API.
+- Analyse meteorological variables such as temperature, precipitation, relative humidity and wind speed.
+- Explore correlations between weather variables and national reservoir filling using sliding window correlation.
+- Visualize weather information on an interactive map.
 
-Database Storage: Store and retrieve data using MongoDB Atlas.
+### Interactive Map
+- Display Norwegian geographical regions and bidding areas.
+- Visualize reservoir filling levels and meteorological variables.
+- Explore different geographical areas through interactive map layers and tooltips.
 
-Interactive Dashboard: Explore energy data through interactive visualizations and filters using Streamlit.
+### Forecasting and Time Series Analysis
+- Use SARIMAX models for forecasting.
+- Explore time series patterns and trends.
+- Analyse seasonal components and other time series characteristics.
 
-Data Analysis: Perform additional analysis using Jupyter Notebooks.
+### Anomaly Analysis
+- Identify unusual observations in energy and weather-related datasets.
+- Explore different anomaly detection methods.
 
-Project Structure
+### Cross-border Electricity Flows
+- Collect electricity flow data between Norway and neighbouring countries using the ENTSO-E API.
+- Process and store electricity flow data.
+- Explore cross-border electricity exchanges through interactive visualizations.
+
+### Data Processing and Storage
+- Process and transform datasets using Python, Pandas and PySpark.
+- Store and retrieve data using MongoDB Atlas.
+- Use Jupyter Notebooks for data exploration, model development and evaluation.
+
+### Error Handling
+- Handle API connection failures and missing data.
+- Detect empty datasets and missing values.
+- Display informative error and warning messages in the Streamlit application.
+
+## Project Structure
 
 ```text
 IND320-OLEGRO99/
 │
-├── Notebooks/                  # Jupyter notebooks and data analysis
+├── Notebooks/                       # Jupyter notebooks and data analysis
 │
-├── streamlit app/              # Streamlit dashboard
+├── streamlit app/
 │   │
-│   ├── app.py                  # Main Streamlit application
-│   ├── Mangodb.py              # MongoDB connection and data functions
-│   ├── weather_functions.py    # Functions for downloading weather data
+│   ├── app.py                       # Main Streamlit application
 │   │
-│   ├── data/
-│   │   └── NVE_Region/         # Geographic shapefiles for NVE regions
-│   │       ├── NVE_Region.shp
-│   │       ├── NVE_Region.shx
-│   │       ├── NVE_Region.dbf
-│   │       └── NVE_Region.prj
+│   ├── data/                        # Geographical data and supporting files
+│   │   ├── Budområder/
+│   │   ├── geojson/
+│   │   └── NVE region/
 │   │
-│   └── Pages/
-│       ├── Home.py
-│       ├── First_month.py
-│       ├── Weather.py          # Meteorological data
-│       ├── Time_series_analysis.py
-│       ├── Anomaly_analysis.py
+│   ├── functions/                   # Reusable functions
+│   │   ├── __init__.py
+│   │   ├── convert_geojson.py
+│   │   ├── download_entsoe_prices.py
+│   │   ├── machine_learning.py
+│   │   ├── Mangodb.py
+│   │   ├── water_functions.py
+│   │   └── weather_functions.py
+│   │
+│   └── Pages/                       # Streamlit application pages
 │       ├── analysis.py
+│       ├── Anomaly_analysis.py
+│       ├── check.py
 │       ├── Cross_border_flows.py
-│       └── test.py
-│
-├── requirements.txt            # Python dependencies
-├── .gitignore                  # Files excluded from Git
-└── README.md                   # Project documentation
+│       ├── First_month.py
+│       ├── Forecasting.py
+│       ├── Home.py
+│       ├── map.py
+│       ├── Time_series_analysis.py
+│       ├── Weather_correlation.py
+│       └── weather.py
+│                           
+├── .gitignore                       # Files excluded from Git
+├── README.md                        # Project documentation
+└── requirements.txt                 # Python dependencies
 ```
