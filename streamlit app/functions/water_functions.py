@@ -6,31 +6,47 @@ URL = "https://biapi.nve.no/magasinstatistikk/api/Magasinstatistikk/HentOffentli
 
 
 def get_water_data() -> pd.DataFrame:
-    """Henter rå magasinstatistikk fra NVE API."""
-    response = requests.get(URL, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-    df = pd.DataFrame(data)
-    return df
+    try:
+        response = requests.get(URL, timeout=30)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if not data:
+            raise ValueError("NVE returned empty data.")
+
+        return pd.DataFrame(data)
+
+    except requests.exceptions.Timeout:
+        raise RuntimeError(
+            "Connection to NVE timed out."
+        )
+
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(
+            f"Could not retrieve data from NVE: {e}"
+        )
+
+    except ValueError as e:
+        raise RuntimeError(
+            f"Invalid response from NVE: {e}"
+        )
 
 
 def process_water_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Renser og klargjør NVE-data:
-    - fjerner ugyldige rader
-    - konverterer datokolonner
-    - filtrerer bort nasjonale totaler (beholder kun elspotområder)
+    Renser og klargjør NVE-data.
     """
-    df = df[df["neste_Publiseringsdato"] != "0001-01-01T00:00:00"].copy()
+
+    df = df[
+        df["neste_Publiseringsdato"] != "0001-01-01T00:00:00"
+    ].copy()
 
     # Konverter datoer
     df["dato_Id"] = pd.to_datetime(df["dato_Id"])
 
-    # Behold kun elspotområder (NO1-NO5), fjern evt. nasjonalt nivå
-    df = df[df["omrType"] == "EL"].copy()
-
-    # Standardiser omrnr til å matche "budomr" i geojson (f.eks. "NO 1")
-    df["omrnr_std"] = "NO " + df["omrnr"].astype(str)
+    # Standardiser områdeverdier
+    df["omrnr_std"] = df["omrnr"].astype(str)
 
     return df
 

@@ -20,7 +20,7 @@ HOURLY_VARIABLES = [
 ]
 
 # Number of random points per precipitation region
-POINTS_PER_REGION = 100
+POINTS_PER_REGION = 20
 
 # Map the Streamlit area selector to precipitation regions
 REGION_MAPPING = {
@@ -404,3 +404,104 @@ def aggregate_weather_daily(weather_data):
     }).reset_index()
 
     return daily_average
+
+def aggregate_weather_period(
+    weather_data,
+    start_date,
+    end_date
+):
+    """
+    Aggregate weather data over a selected period.
+
+    Temperature, humidity and wind speed:
+    Average across days and locations.
+
+    Precipitation:
+    Sum of average daily precipitation across locations.
+    """
+
+    if weather_data.empty:
+        return pd.DataFrame()
+
+    # Convert dates
+    data = weather_data.copy()
+
+    data["date"] = pd.to_datetime(
+        data["date"],
+        utc=True
+    )
+
+    start = pd.to_datetime(
+        start_date,
+        utc=True
+    ).normalize()
+
+    end = (
+        pd.to_datetime(end_date, utc=True).normalize()
+        + pd.Timedelta(days=1)
+    )
+
+    # Filter selected period
+    data = data[
+        (data["date"] >= start) &
+        (data["date"] < end)
+    ].copy()
+
+    if data.empty:
+        return pd.DataFrame()
+
+    # First aggregate hourly data to daily values
+    daily = aggregate_weather_daily(data)
+
+    # Aggregate daily values over the selected period
+    period_average = daily.groupby(
+        "region"
+    ).agg(
+        temperature_2m=("temperature_2m", "mean"),
+        precipitation=("precipitation", "sum"),
+        avg_daily_precipitation=("precipitation", "mean"),
+        relative_humidity_2m=("relative_humidity_2m", "mean"),
+        wind_speed_10m=("wind_speed_10m", "mean"),
+        days=("date", "nunique")
+    ).reset_index()
+
+    return period_average
+
+def aggregate_weather_weekly(weather_data):
+    """
+    Aggregate hourly weather data to weekly values.
+
+    Temperature, humidity and wind speed:
+    Weekly averages.
+
+    Precipitation:
+    Weekly sum of daily average precipitation.
+    """
+
+    if weather_data.empty:
+        return pd.DataFrame()
+
+    data = weather_data.copy()
+
+    data["date"] = pd.to_datetime(data["date"], utc=True)
+
+    # Aggregate hourly data to daily values
+    daily = aggregate_weather_daily(data)
+
+    # Combine weather regions into one national average
+    daily = daily.groupby("date").agg(
+        temperature_2m=("temperature_2m", "mean"),
+        precipitation=("precipitation", "mean"),
+        relative_humidity_2m=("relative_humidity_2m", "mean"),
+        wind_speed_10m=("wind_speed_10m", "mean")
+    )
+
+    # Aggregate daily values to weeks ending Sunday
+    weekly = daily.resample("W-SUN").agg({
+        "temperature_2m": "mean",
+        "precipitation": "sum",
+        "relative_humidity_2m": "mean",
+        "wind_speed_10m": "mean"
+    })
+
+    return weekly.reset_index()

@@ -1,164 +1,583 @@
-import json
-import geopandas as gpd
+
 import streamlit as st
-import plotly.express as px
-import sys
+import geopandas as gpd
+import pydeck as pdk
+import pandas as pd
 from pathlib import Path
 
+from functions.water_functions import (
+    get_water_data,
+    process_water_data,
+)
+
+from functions.weather_functions import (
+    download_weather,
+    aggregate_weather_period
+)
+
+@st.cache_data(show_spinner=False)
+def get_weather_data_cached():
+    """
+    Download weather data once for a fixed historical period.
+    """
+
+    all_weather = []
+
+    for region in ["East", "North", "West"]:
+
+        weather_data = download_weather(
+            region=region,
+            start_date="2024-01-01",
+            end_date="2025-12-31"
+        )
+
+        if not weather_data.empty:
+            all_weather.append(weather_data)
+
+    if not all_weather:
+        return pd.DataFrame()
+
+    return pd.concat(
+        all_weather,
+        ignore_index=True
+    )
 
 
-from functions.water_functions import get_water_values, process_water_data, get_water_data
+def get_weather_period_data(weather_data, start_date, end_date):
+    """
+    Aggregate already downloaded weather data for selected dates.
+    """
+
+    return aggregate_weather_period(
+        weather_data,
+        start_date,
+        end_date
+    )
+
+st.title("Interactive map")
+
+# --------------------------------------------------
+# 1. Load GeoJSON files
+# --------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+bud_path = BASE_DIR / "data" / "geojson" / "Budområder.geojson"
+region_path = BASE_DIR / "data" / "geojson" / "NVE_Region.geojson"
+
+gdf_bud = gpd.read_file(bud_path)
+gdf_region = gpd.read_file(region_path)
+gdf_region["REGION"] = gdf_region["REGION"].replace({
+    "RÃ\x98": "RØ",
+    "RÃ˜": "RØ",
+    "RØ": "RØ"
+})
+
+# --------------------------------------------------
+# 2. Get reservoir data from NVE
+# --------------------------------------------------
+
+water_df = get_water_data()
+water_df = process_water_data(water_df)
+
+# Filter price areas
+price_df = water_df[
+    water_df["omrType"] == "EL"
+].copy()
+
+# Convert date and area number
+price_df["Date"] = pd.to_datetime(
+    price_df["dato_Id"],
+    errors="coerce"
+)
+
+price_df["omrnr"] = pd.to_numeric(
+    price_df["omrnr"],
+    errors="coerce"
+)
+
+# Create matching area names
+price_df["budomr"] = (
+    "NO " + price_df["omrnr"].astype("Int64").astype(str)
+)
+
+price_df = price_df.dropna(
+    subset=["Date", "omrnr", "fyllingsgrad"]
+)
 
 
-# --- Load GeoJSON as GeoDataFrame ---
-HERE = Path(__file__).resolve().parent  # .../streamlit app/Pages
+# --------------------------------------------------
+# 3. Select date
+# --------------------------------------------------
 
-GEOJSON_WATER = (HERE.parent / "data" / "geojson" / "NVE_Region.geojson")
-gdf_water = gpd.read_file(str(GEOJSON_WATER))
+st.subheader("Select date")
 
-st.write("Kolonner i gdf_water:", gdf_water.columns.tolist())
-st.dataframe(gdf_water.head(5))
-# etter at du kaller funksjonen og lagrer resultatet:
-# Mapping: VASS omrnr -> GeoJSON region-kode (REGION)
-# (du bekreftet dette)
-vass_to_region = {
-    1: "RN",  # Nord
-    2: "RØ",  # Øst
-    3: "RV",  # Vest
+min_date = price_df["Date"].min().date()
+max_date = price_df["Date"].max().date()
+
+selected_date = st.date_input(
+    "Select date",
+    value=max_date,
+    min_value=min_date,
+    max_value=max_date,
+    key="price_area_date",
+)
+
+
+# --------------------------------------------------
+# 4. Get latest available values for selected date
+# --------------------------------------------------
+
+selected_price_df = price_df[
+    price_df["Date"].dt.date <= selected_date
+].copy()
+
+selected_price_df = (
+    selected_price_df
+    .sort_values("Date")
+    .groupby("omrnr")
+    .tail(1)
+)
+
+# water values and stuff
+# Filter water areas
+water_area_df = water_df[
+    water_df["omrType"] == "VASS"
+].copy()
+
+water_area_df["Date"] = pd.to_datetime(
+    water_area_df["dato_Id"],
+    errors="coerce"
+)
+
+water_area_df["omrnr"] = pd.to_numeric(
+    water_area_df["omrnr"],
+    errors="coerce"
+)
+
+water_area_df = water_area_df.dropna(
+    subset=["Date", "omrnr", "fyllingsgrad"]
+)
+
+# Select latest available values for selected date
+selected_water_df = water_area_df[
+    water_area_df["Date"].dt.date <= selected_date
+].copy()
+
+selected_water_df = (
+    selected_water_df
+    .sort_values("Date")
+    .groupby("omrnr")
+    .tail(1)
+)
+
+
+
+# --------------------------------------------------
+# 5. Merge reservoir values with GeoJSON
+# --------------------------------------------------
+
+gdf = gdf_bud.copy()
+
+gdf["budomr"] = gdf["budomr"].astype(str).str.strip()
+selected_price_df["budomr"] = (
+    selected_price_df["budomr"].astype(str).str.strip()
+)
+
+gdf = gdf.merge(
+    selected_price_df[["budomr", "fyllingsgrad"]],
+    on="budomr",
+    how="left"
+)
+
+gdf["fyllingsgrad"] = pd.to_numeric(
+    gdf["fyllingsgrad"],
+    errors="coerce"
+)
+# --------------------------------------------------
+# 6. Define colors based on reservoir filling
+# --------------------------------------------------
+
+def get_color(value):
+
+    if pd.isna(value):
+        return [180, 180, 180, 100]
+
+    elif value < 40:
+        return [220, 50, 50, 170]
+
+    elif value < 60:
+        return [255, 165, 0, 170]
+
+    elif value < 80:
+        return [255, 220, 0, 170]
+
+    else:
+        return [40, 170, 80, 170]
+
+
+gdf["fill_color"] = gdf["fyllingsgrad"].apply(get_color)
+# --------------------------------------------------
+# 7. Select area type
+# --------------------------------------------------
+# Map the five weather regions to three water areas
+region_to_water_area = {
+    "RS": "East",
+    "RØ": "East",
+    "RV": "West",
+    "RM": "North",
+    "RN": "North",
 }
 
-# Vi lager en hjelpekode: regionkode -> VASS-omrnr
-region_to_vass = {reg: omrnr for omrnr, reg in vass_to_region.items()}
+# Create water area GeoDataFrame
+gdf_water = gdf_region.copy()
 
-# --- UI: velg periode ---
-st.caption("Velg periode som skal aggregeres over")
-
-col1, col2 = st.columns(2)
-with col1:
-    start_date = st.date_input("Startdato", value=None)
-with col2:
-    end_date = st.date_input("Sluttdato", value=None)
-
-agg_func = st.selectbox("Aggregering", ["mean", "min", "max", "last"], index=0)
-
-if start_date is None or end_date is None:
-    st.warning("Velg start- og sluttdato først.")
-    st.stop()
-
-# --- Hent vannverdier for VASS ---
-# Her trenger vi at get_water_values returnerer verdier per VASS-område (omrnr).
-# Siden get_water_values i din kode sannsynligvis lager budomr, må vi i stedet:
-# - hente VASS data (omrnr) fra API via water_functions
-# Hvis get_water_values IKKE støtter omrnr direkte, må vi justere water_functions.
-gdf_water = gdf_water.copy()
-
-# cast OBJECTID til string slik at den matcher omrnr_std (som er str i agg_df)
-gdf_water["OBJECTID"] = gdf_water["OBJECTID"].astype(str)
-# For nå: vi forsøker å bruke samme get_water_values, men med id_col_geo="omrnr"
-# og forventer at water_functions kan bruke omrnr som id.
-water_gdf = get_water_values(
-    gdf=gdf_water,
-    start_date=start_date,
-    end_date=end_date,
-    agg_func=agg_func,          
-    id_col_geo="OBJECTID",
-    value_col="fyllingsgrad",   
+gdf_water["water_area"] = (
+    gdf_water["REGION"].map(region_to_water_area)
 )
 
-values_gdf_or_df = water_gdf
+# Merge polygons belonging to the same water area
+gdf_water = gdf_water.dissolve(
+    by="water_area",
+    as_index=False
+)
+
+# Match water areas to NVE area numbers
+water_area_mapping = {
+    "East": 1,
+    "West": 2,
+    "North": 3,
+}
+
+gdf_water["omrnr"] = (
+    gdf_water["water_area"].map(water_area_mapping)
+)
+
+# Merge reservoir filling values
+gdf_water = gdf_water.merge(
+    selected_water_df[["omrnr", "fyllingsgrad"]],
+    on="omrnr",
+    how="left"
+)
+
+# Different color for each price area
+area_colors = {
+    "NO 1": [255, 99, 71, 170],    # Red
+    "NO 2": [65, 105, 225, 170],   # Blue
+    "NO 3": [50, 205, 50, 170],    # Green
+    "NO 4": [255, 165, 0, 170],   # Orange
+    "NO 5": [148, 0, 211, 170],   # Purple
+}
+
+water_colors = {
+    "East": [255, 99, 71, 170],
+    "West": [65, 105, 225, 170],
+    "North": [50, 205, 50, 170],
+}
+
+weather_region_colors = {
+    "RS": area_colors["NO 1"],
+    "RØ": area_colors["NO 5"],
+    "RV": area_colors["NO 2"],
+    "RM": area_colors["NO 3"],
+    "RN": area_colors["NO 4"],
+}
 
 
+area_type = st.selectbox(
+    "Select area type",
+    ["Price area", "Water area", "Weather region"],
+    key="map_area_type",
+)
 
-# ---- Hvis get_water_values ikke gir omrnr: vi må bruke en fallback
-# Vi sjekker hva slags ID-kolonne vi faktisk fikk:
-print("Kolonner i water_gdf:", water_gdf.columns.tolist())
+# Weather settings
+if area_type == "Weather region":
 
-# For plot trenger vi match mot GeoJSON sin REGION.
-# Vi bygger en value per REGION ved å mappe fra VASS-omrnr til REGION.
-# (Her må water_gdf inneholde kolonnen 'omrnr')
-if "omrnr" not in water_gdf.columns:
-    st.error(
-        "water_gdf mangler kolonnen 'omrnr'. "
-        "Da må vi endre water_functions.py slik at get_water_values kan returnere VASS-verdier per omrnr."
+    st.subheader("Weather settings")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        weather_start_date = st.date_input(
+            "Start date",
+            value=pd.to_datetime("2025-01-01").date(),
+            key="weather_start_date"
+        )
+
+    with col2:
+        weather_end_date = st.date_input(
+            "End date",
+            value=pd.to_datetime("2025-01-07").date(),
+            key="weather_end_date"
+        )
+
+    weather_parameter = st.selectbox(
+        "Select weather property",
+        [
+            "Temperature",
+            "Precipitation",
+            "Relative humidity",
+            "Wind speed"
+        ],
+        key="weather_parameter"
     )
-    st.stop()
 
-# Bygg plot-tabell per GeoJSON region
-water_gdf["REGION"] = water_gdf["omrnr"].map(vass_to_region)
+    if weather_start_date > weather_end_date:
+        st.error("Start date must be before end date.")
+        st.stop()
 
-df_plot = water_gdf.dropna(subset=["REGION"])[["REGION", "fyllingsgrad"]].copy()
+    # Download weather data (cached)
+    with st.spinner("Loading weather data..."):
+        weather_df = get_weather_data_cached()
 
-# --- Konverter GeoDataFrame til GeoJSON for Plotly ---
-geojson_obj = json.loads(gdf_water.to_json())
+    # Aggregate based on selected dates
+    weather_period = get_weather_period_data(
+        weather_df,
+        weather_start_date,
+        weather_end_date
+    )
+# --------------------------------------------------
+# 9. Create map layer
+# --------------------------------------------------
 
-# Fargen skal kobles på GeoJSON sin property for region
-# I din GeoJSON har du REGIONSOM FELT: gdf_water["REGION"].
-featureidkey = "properties.REGION"
+if area_type == "Price area":
 
-fig = px.choropleth_map(
-    df_plot,
-    geojson=geojson_obj,
-    locations="REGION",
-    featureidkey=featureidkey,
-    color="fyllingsgrad",
-    map_style="open-street-map",
-    zoom=6,
-    center={"lat": 63.4, "lon": 10.4},
-)
+    gdf = gdf_bud.copy()
 
-fig.update_traces(marker_line=dict(width=1.0, color="rgba(255,255,255,0.9)"))
+    gdf = gdf.merge(
+        selected_price_df[["budomr", "fyllingsgrad"]],
+        on="budomr",
+        how="left"
+    )
 
-# --- Marker valgt område med tykk outline ---
-selected = st.session_state.get("selected_area")
-if selected is not None:
-    sel_df = df_plot[df_plot["REGION"] == selected].copy()
+    gdf["fill_color"] = gdf["budomr"].map(area_colors)
 
-    if not sel_df.empty:
-        custom_scale_selected = [
-            (0.0, "rgba(0,0,0,0.0)"),
-            (1.0, "rgba(0,0,0,0.0)"),
+    id_column = "budomr"
+
+
+elif area_type == "Water area":
+
+    gdf = gdf_water.copy()
+
+    gdf["fill_color"] = gdf["water_area"].map(water_colors)
+
+    id_column = "water_area"
+
+
+else:
+
+    gdf = gdf_region.copy()
+
+    id_column = "REGION"
+
+    if weather_period.empty:
+        st.warning("No weather data available for the selected period.")
+
+    else:
+
+        # Map each weather region to its corresponding NVE region codes
+        region_mapping = {
+            "East": ["RS", "RØ"],
+            "North": ["RM", "RN"],
+            "West": ["RV"]
+        }
+
+        # Select the weather variable
+        parameter_mapping = {
+            "Temperature": "temperature_2m",
+            "Precipitation": "precipitation",
+            "Relative humidity": "relative_humidity_2m",
+            "Wind speed": "wind_speed_10m"
+        }
+
+        selected_parameter = parameter_mapping[
+            weather_parameter
         ]
 
-        fig_sel = px.choropleth_map(
-            sel_df,
-            geojson=geojson_obj,
-            locations="REGION",
-            featureidkey="properties.REGION",
-            color="fyllingsgrad",
-            color_continuous_scale=custom_scale_selected,
-            map_style="open-street-map",
-            zoom=6,
-            center={"lat": 63.4, "lon": 10.4},
+        # Create mapping from NVE region to aggregated weather values
+        weather_lookup = {}
+
+        for _, row in weather_period.iterrows():
+
+            weather_region = row["region"]
+            value = row[selected_parameter]
+
+            for nve_region in region_mapping[weather_region]:
+                weather_lookup[nve_region] = value
+
+        gdf["weather_value"] = gdf["REGION"].map(
+            weather_lookup
         )
-        fig_sel.update_traces(marker_line=dict(width=5.0, color="rgba(255, 0, 0, 1.0)"))
 
-        for tr in fig_sel.data:
-            fig.add_trace(tr)
+        # Create colors based on weather values
+        values = gdf["weather_value"].dropna()
 
-fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+        if not values.empty:
 
-# --- Klikk-handling ---
-# Vi må hente hva Plotly returnerer ved click.
-# Siden dette kan variere med Streamlit/Plotly-versjon:
-# - vi bruker en debug-expander
-st.caption("Klikk et område for å markere det ✅")
+            min_value = values.min()
+            max_value = values.max()
 
-clicked_payload = st.plotly_chart(
-    fig,
-    key="water_map",
-    on_select="rerun",
-    use_container_width=True,
+            def get_weather_color(value):
+
+                if pd.isna(value):
+                    return [180, 180, 180, 100]
+
+                if max_value == min_value:
+                    normalized = 0.5
+                else:
+                    normalized = (
+                        (value - min_value) /
+                        (max_value - min_value)
+                    )
+
+                # Blue for low values, red for high values
+                red = int(255 * normalized)
+                blue = int(255 * (1 - normalized))
+
+                return [red, 80, blue, 170]
+
+            gdf["fill_color"] = gdf["REGION"].map(
+                weather_region_colors
+            )
+
+        else:
+            gdf["fill_color"] = [
+                [180, 180, 180, 100]
+            ] * len(gdf)
+
+
+
+# 8. Initialize session state
+# --------------------------------------------------
+
+if "map_selected_area" not in st.session_state:
+    st.session_state["map_selected_area"] = None
+
+if "map_selected_area_type" not in st.session_state:
+    st.session_state["map_selected_area_type"] = None
+
+
+# --------------------------------------------------
+# 9. Create map layer
+# --------------------------------------------------
+
+
+
+geojson_data = gdf.__geo_interface__
+
+
+layer = pdk.Layer(
+    "GeoJsonLayer",
+    id="area-layer",
+    data=geojson_data,
+    stroked=True,
+    filled=True,
+    get_fill_color="properties.fill_color",
+    get_line_color=[255, 255, 255, 255],
+    get_line_width=3,
+    line_width_min_pixels=2,
+    pickable=True,
+    auto_highlight=True,
 )
 
-with st.expander("Debug: click payload (må sjekkes første gang) 🧪"):
-    st.write(st.session_state.get("water_map"))
-    st.write("selected_area:", st.session_state.get("selected_area"))
 
-# --- OBS: fyll inn riktig mapping etter at du ser payload ---
-# Vanligvis vil du kunne gjøre noe som dette (tilpass etter payload-strukturen):
-#
-# payload = st.session_state.get("water_map")
-# if payload and "points" in payload and len(payload["points"]) > 0:
-#     st.session_state["selected_area"] = payload["points"][0]["location"]
-#
-# For at jeg skal skrive riktig linje: send meg outputet fra debug-expander.
+# --------------------------------------------------
+# 10. Create map
+# --------------------------------------------------
+# --------------------------------------------------
+# Tooltip
+# --------------------------------------------------
+
+if area_type == "Price area":
+
+    tooltip_text = (
+        "{budomr}\n"
+        "Reservoir filling: {fyllingsgrad}%"
+    )
+
+elif area_type == "Water area":
+
+    tooltip_text = (
+        "{water_area}\n"
+        "Reservoir filling: {fyllingsgrad}%"
+    )
+
+else:
+
+    unit_mapping = {
+        "Temperature": "°C",
+        "Precipitation": "mm",
+        "Relative humidity": "%",
+        "Wind speed": "km/h"
+    }
+
+    tooltip_text = (
+        "{REGION}\n"
+        + weather_parameter
+        + ": {weather_value}"
+        + " "
+        + unit_mapping[weather_parameter]
+    )
+
+
+view_state = pdk.ViewState(
+    latitude=64.5,
+    longitude=15,
+    zoom=3.5,
+    pitch=0,
+)
+
+deck = pdk.Deck(
+    layers=[layer],
+    initial_view_state=view_state,
+    map_style=None,
+    tooltip={
+    "text": tooltip_text
+    },
+)
+
+event = st.pydeck_chart(
+    deck,
+    use_container_width=True,
+    on_select="rerun",
+    selection_mode="single-object",
+)
+
+if area_type == "Weather region" and not weather_period.empty:
+
+    st.subheader("Aggregated weather properties")
+
+    st.dataframe(
+        weather_period,
+        use_container_width=True
+    )
+# --------------------------------------------------
+# 11. Handle map selection
+# --------------------------------------------------
+
+if event and event.selection:
+
+    objects = event.selection.get("objects", {})
+    selected_objects = objects.get("area-layer", [])
+
+    if selected_objects:
+
+        selected_area = selected_objects[0]["properties"][id_column]
+
+        st.session_state["map_selected_area"] = selected_area
+        st.session_state["map_selected_area_type"] = area_type
+
+
+# --------------------------------------------------
+# 12. Display selected area
+# --------------------------------------------------
+
+st.write(
+    "Selected area:",
+    st.session_state["map_selected_area"],
+)
+
+st.write(
+    "Selected area type:",
+    st.session_state["map_selected_area_type"],
+)
