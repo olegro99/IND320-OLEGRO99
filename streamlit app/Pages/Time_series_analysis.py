@@ -483,9 +483,10 @@ with spectrogram_tab:
 
 
             # Convert relative time to dates
+            start_date = pd.Timestamp(time_series.index[0])
+
             spectrogram_dates = (
-                time_series.index[0]
-                + pd.to_timedelta(times, unit="D")
+                start_date + pd.to_timedelta(times, unit="D")
             )
 
 
