@@ -461,16 +461,17 @@ if "map_selected_area_type" not in st.session_state:
 # --------------------------------------------------
 # 9. Create map layer
 # --------------------------------------------------
-print("\n--- DEBUG GDF ---")
-print("Columns:", gdf.columns.tolist())
-print("Shape:", gdf.shape)
-print(gdf.head())
-print("-----------------\n")
+if area_type in ["Price area", "Water area"]:
 
-gdf["fyllingsgrad_visning"] = gdf["fyllingsgrad"].map(
-    lambda x: f"{x:.2f}" if pd.notna(x) else "N/A"
-)
+    gdf["fyllingsgrad_visning"] = gdf["fyllingsgrad"].map(
+        lambda x: f"{x:.2f}" if pd.notna(x) else "N/A"
+    )
 
+elif area_type == "Weather region":
+
+    gdf["weather_value_visning"] = gdf["weather_value"].map(
+        lambda x: f"{x:.2f}" if pd.notna(x) else "N/A"
+    )
 
 geojson_data = gdf.__geo_interface__
 
@@ -523,10 +524,10 @@ else:
     tooltip_text = (
         "{REGION}\n"
         + weather_parameter
-        + ": {weather_value}"
+        + ": {weather_value_visning}"
         + " "
         + unit_mapping[weather_parameter]
-    )
+    )   
 
 view_state = pdk.ViewState(
     latitude=64.5,
