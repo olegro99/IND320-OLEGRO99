@@ -1,32 +1,35 @@
-
 import streamlit as st
 import pandas as pd
 import sys
 from pathlib import Path
 import plotly.express as px
 
+# Define the project root directory and add it to the Python path
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
+# Import functions for processing and retrieving reservoir data
 from functions.water_functions import (
     process_water_data,
     get_water_data
 )
 
+# Import functions for retrieving and aggregating weather data
 from functions.weather_functions import (
     aggregate_weather_daily,
     download_weather
 )
 
 
-
 # Download weather data from Open-Meteo
+# Cache the result for 24 hours to avoid unnecessary API requests
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_weather_from_api():
 
     regions = ["West", "East", "North"]
     weather_frames = []
 
+    # Download weather data for each region
     for region in regions:
 
         weather_region = download_weather(
@@ -36,6 +39,7 @@ def load_weather_from_api():
             batch_size=10
         )
 
+        # Check whether the API returned valid data
         if weather_region is None or weather_region.empty:
             raise ValueError(
                 f"No weather data returned for {region}."
@@ -43,12 +47,14 @@ def load_weather_from_api():
 
         weather_frames.append(weather_region)
 
+    # Combine weather data from all regions into one DataFrame
     return pd.concat(
         weather_frames,
         ignore_index=True
     )
 
 
+# Display the page title and introduction
 st.title("Sliding Window Correlation")
 
 st.write(
@@ -56,16 +62,21 @@ st.write(
     "national reservoir filling over time."
 )
 
+
+# Download weather data when the button is clicked
 if st.button("Download weather data"):
 
     try:
+        # Display a loading indicator while retrieving weather data
         with st.spinner("Downloading weather data from Open-Meteo..."):
             weather_data = load_weather_from_api()
 
+        # Store the downloaded data in the session state
         st.session_state["weather_data"] = weather_data
         st.success("Weather data downloaded successfully!")
 
     except Exception as e:
+        # Handle errors during the API request
         st.error("Unable to retrieve weather data from Open-Meteo.")
         st.warning("Please try again later.")
         st.caption(str(e))
@@ -76,23 +87,25 @@ if "weather_data" not in st.session_state:
     st.info("Click 'Download weather data' to load the data and display the correlation plot.")
     st.stop()
 
+# Retrieve the weather data from the session state
 weather_data = st.session_state["weather_data"]
 
 
-
+# Aggregate hourly weather data into weekly observations
 def aggregate_weather_weekly(weather_data):
 
     data = weather_data.copy()
 
+    # Convert dates to UTC datetime format
     data["date"] = pd.to_datetime(
         data["date"],
         utc=True
     )
 
-    # Aggregate hourly data to daily values
+    # Aggregate hourly observations into daily values
     daily = aggregate_weather_daily(data)
 
-    # Average across all weather regions
+    # Calculate national daily averages across all weather regions
     daily_national = daily.groupby("date").agg(
         temperature_2m=("temperature_2m", "mean"),
         precipitation=("precipitation", "mean"),
@@ -100,7 +113,7 @@ def aggregate_weather_weekly(weather_data):
         wind_speed_10m=("wind_speed_10m", "mean")
     )
 
-    # Aggregate daily values to weekly values
+    # Aggregate daily observations into weekly values
     weekly = daily_national.resample("W-SUN").agg({
         "temperature_2m": "mean",
         "precipitation": "sum",
@@ -108,13 +121,16 @@ def aggregate_weather_weekly(weather_data):
         "wind_speed_10m": "mean"
     })
 
-    # Only keep complete weeks
+    # Count the number of daily observations in each week
     weekly["days"] = daily_national.resample("W-SUN").size()
+
+    # Keep only weeks containing all seven daily observations
     weekly = weekly[weekly["days"] == 7]
 
     return weekly.drop(columns="days").reset_index()
 
 
+# Generate weekly national weather data
 weather_weekly = aggregate_weather_weekly(weather_data)
 
 
@@ -123,19 +139,22 @@ water_no = water_df[
     water_df["omrType"] == "NO"
 ].copy()
 
+# Rename the date column to match the weather dataset
 water_no = water_no.rename(
     columns={"dato_Id": "date"}
 )
 
+# Keep only the date and reservoir filling columns
 water_no = water_no[["date", "fyllingsgrad"]].copy()
 
+# Convert dates to UTC datetime format
 water_no["date"] = pd.to_datetime(
     water_no["date"],
     utc=True
 )
 
 
-# Merge weather and reservoir data
+# Merge weekly weather data with national reservoir filling data
 combined_data = pd.merge(
     weather_weekly,
     water_no,
@@ -144,11 +163,13 @@ combined_data = pd.merge(
 ).sort_values("date").reset_index(drop=True)
 
 
+# Check whether the merge returned any matching observations
 if combined_data.empty:
     st.warning("No matching weather and reservoir data found.")
     st.stop()
 
 
+# Check for missing values in the combined dataset
 missing_values = combined_data.isna().sum()
 
 if missing_values.any():
@@ -159,6 +180,8 @@ if missing_values.any():
     )
 
 
+# Calculate rolling correlation between weather variables
+# and national reservoir filling
 def calculate_rolling_correlation(
     data,
     weather_variable,
@@ -168,11 +191,11 @@ def calculate_rolling_correlation(
 
     result = data.copy()
 
-    # Shift weather variable to compare earlier weather
-    # with later reservoir filling
+    # Shift the weather variable to compare earlier weather
+    # conditions with later reservoir filling
     result["weather_lagged"] = result[weather_variable].shift(lag)
 
-    # Calculate rolling correlation
+    # Calculate Pearson correlation over a rolling time window
     result["correlation"] = (
         result["weather_lagged"]
         .rolling(window=window_length)
@@ -182,6 +205,7 @@ def calculate_rolling_correlation(
     return result
 
 
+# Display the page title and description
 st.title("Sliding Window Correlation")
 
 st.write(
@@ -190,7 +214,7 @@ st.write(
 )
 
 
-# Select weather variable
+# Allow the user to select a meteorological variable
 weather_variable = st.selectbox(
     "Select meteorological variable",
     options=[
@@ -208,7 +232,7 @@ weather_variable = st.selectbox(
 )
 
 
-# Select lag
+# Allow the user to select the time lag in weeks
 lag = st.slider(
     "Lag (weeks)",
     min_value=0,
@@ -217,7 +241,7 @@ lag = st.slider(
 )
 
 
-# Select window length
+# Allow the user to select the rolling window length in weeks
 window_length = st.slider(
     "Window length (weeks)",
     min_value=8,
@@ -226,7 +250,7 @@ window_length = st.slider(
 )
 
 
-# Calculate correlation
+# Calculate the rolling correlation using the selected settings
 correlation_data = calculate_rolling_correlation(
     data=combined_data,
     weather_variable=weather_variable,
@@ -235,7 +259,7 @@ correlation_data = calculate_rolling_correlation(
 )
 
 
-# Plot correlation
+# Create an interactive line plot of the rolling correlation
 fig = px.line(
     correlation_data,
     x="date",
@@ -247,12 +271,15 @@ fig = px.line(
     }
 )
 
+# Add a horizontal reference line at zero correlation
 fig.add_hline(
     y=0,
     line_dash="dash",
     line_color="gray"
 )
 
+# Set the y-axis range to the possible Pearson correlation values
 fig.update_yaxes(range=[-1, 1])
 
+# Display the interactive plot in Streamlit
 st.plotly_chart(fig, use_container_width=True)
