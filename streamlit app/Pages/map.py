@@ -461,6 +461,12 @@ if "map_selected_area_type" not in st.session_state:
 # --------------------------------------------------
 # 9. Create map layer
 # --------------------------------------------------
+print("\n--- DEBUG GDF ---")
+print("Columns:", gdf.columns.tolist())
+print("Shape:", gdf.shape)
+print(gdf.head())
+print("-----------------\n")
+
 gdf["fyllingsgrad_visning"] = gdf["fyllingsgrad"].map(
     lambda x: f"{x:.2f}" if pd.notna(x) else "N/A"
 )
